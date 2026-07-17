@@ -3,7 +3,7 @@
 // overall — so a user can explain their own score from this screen alone.
 
 import type { SessionDetail } from '../api/types'
-import { COMPONENTS, OVERALL_COLOR, scoreTone } from '../lib/scoring'
+import { COMPONENTS, OVERALL_COLOR, scoreTone, verdict } from '../lib/scoring'
 import { ScoreRing } from './ui/ScoreRing'
 
 interface Props {
@@ -13,11 +13,18 @@ interface Props {
 export function ScoreBreakdown({ session }: Props) {
   const { scores, metrics, weights } = session
   const overall = scores.overall ?? 0
+  const v = verdict(scores.overall)
 
   return (
     <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
       {/* Overall */}
-      <div className="card flex flex-col items-center justify-center gap-3 p-6">
+      <div className="card flex flex-col items-center justify-center gap-4 p-6">
+        <span
+          className="rounded-full px-3 py-1 text-sm font-bold"
+          style={{ color: v.color, background: `${v.color}1a` }}
+        >
+          {v.label}
+        </span>
         <ScoreRing value={overall} color={OVERALL_COLOR} sublabel="overall" />
         <p className="text-center text-sm text-slate-500">
           A weighted blend of the four parts below. Every number comes from your recording.

@@ -3,7 +3,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { LevelState, Topic } from '../api/types'
+import type { Topic } from '../api/types'
 import { ApiError, createSession, getLevel, getRandomTopic } from '../api/client'
 import { useRecorder } from '../hooks/useRecorder'
 import { useLiveAudio } from '../hooks/useLiveAudio'
@@ -11,6 +11,7 @@ import { BreathingRitual } from '../components/BreathingRitual'
 import { Recorder } from '../components/Recorder'
 import { VirtualAudience } from '../components/VirtualAudience'
 import { Spinner } from '../components/ui/Spinner'
+import { COMPONENTS } from '../lib/scoring'
 import { ROOM_LABEL, ROOM_SIZES, defaultRoomSize, forgivenessForSize } from '../lib/audience'
 
 type Phase = 'idle' | 'ritual' | 'recording' | 'submitting'
@@ -21,7 +22,6 @@ export function PracticePage() {
   const recorder = useRecorder()
 
   const [topic, setTopic] = useState<Topic | null>(null)
-  const [level, setLevel] = useState<LevelState | null>(null)
   const [phase, setPhase] = useState<Phase>('idle')
   const [roomSize, setRoomSize] = useState<number>(3)
   const [error, setError] = useState<string | null>(null)
@@ -46,11 +46,8 @@ export function PracticePage() {
   useEffect(() => {
     loadTopic()
     getLevel()
-      .then((l) => {
-        setLevel(l)
-        setRoomSize(defaultRoomSize(l.current_level))
-      })
-      .catch(() => setLevel(null))
+      .then((l) => setRoomSize(defaultRoomSize(l.current_level)))
+      .catch(() => {})
   }, [loadTopic])
 
   const beginRecording = useCallback(async () => {
@@ -192,11 +189,25 @@ export function PracticePage() {
             >
               ● Start practice
             </button>
-            {level && (
-              <p className="mt-1 text-xs text-slate-400">
-                Level {level.current_level} · {level.name}
+
+            {/* What we'll measure — sets expectations and reinforces transparency. */}
+            <div className="mt-6 w-full border-t border-slate-100 pt-5">
+              <p className="mb-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-400">
+                What we'll measure
               </p>
-            )}
+              <div className="flex flex-wrap items-center justify-center gap-2.5">
+                {COMPONENTS.map((c) => (
+                  <span
+                    key={c.key}
+                    className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1.5 text-sm font-medium text-slate-600 ring-1 ring-slate-100"
+                    title={c.blurb}
+                  >
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ background: c.color }} />
+                    {c.label}
+                  </span>
+                ))}
+              </div>
+            </div>
           </>
         )}
       </section>

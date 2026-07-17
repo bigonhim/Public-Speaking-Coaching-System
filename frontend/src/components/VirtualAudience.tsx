@@ -98,7 +98,8 @@ export function VirtualAudience({ engagement, size }: Props) {
 
   if (size === 0) {
     return (
-      <div className="flex h-40 flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white/50 text-center">
+      <div className="flex h-44 flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white/50 text-center">
+        <div className="mb-1 text-2xl opacity-40">🪑</div>
         <p className="text-sm font-medium text-slate-500">Empty room</p>
         <p className="mt-1 text-xs text-slate-400">Just you and the topic — a gentle place to start.</p>
       </div>
@@ -106,10 +107,29 @@ export function VirtualAudience({ engagement, size }: Props) {
   }
 
   return (
-    <div className="flex flex-wrap items-end justify-center gap-3 rounded-2xl bg-gradient-to-b from-brand-50/60 to-white p-5">
-      {states.map((s, i) => (
-        <AudienceFace key={metaRef.current[i]?.seed ?? i} seed={metaRef.current[i]?.seed ?? `s${i}`} state={s} />
-      ))}
+    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-slate-100 via-brand-50/50 to-white p-6 pb-9">
+      {/* soft stage spotlight */}
+      <div
+        className="pointer-events-none absolute inset-x-0 -top-10 h-40"
+        style={{ background: 'radial-gradient(60% 100% at 50% 0%, rgba(99,102,241,0.14), transparent 70%)' }}
+        aria-hidden
+      />
+      <div className="relative flex flex-wrap items-end justify-center gap-4">
+        {states.map((s, i) => (
+          <AudienceFace
+            key={metaRef.current[i]?.seed ?? i}
+            seed={metaRef.current[i]?.seed ?? `s${i}`}
+            state={s}
+            size={60}
+          />
+        ))}
+      </div>
+      {/* stage floor */}
+      <div
+        className="pointer-events-none absolute inset-x-6 bottom-4 h-3 rounded-full"
+        style={{ background: 'radial-gradient(50% 100% at 50% 0%, rgba(15,23,42,0.10), transparent 75%)' }}
+        aria-hidden
+      />
     </div>
   )
 }

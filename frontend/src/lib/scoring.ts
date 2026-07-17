@@ -58,6 +58,16 @@ export function scoreTone(score: number | null): string {
   return '#ef4444'
 }
 
+/** A short qualitative verdict for an overall score. */
+export function verdict(overall: number | null): { label: string; color: string } {
+  if (overall === null) return { label: 'No score', color: '#94a3b8' }
+  if (overall >= 85) return { label: 'Excellent', color: '#059669' }
+  if (overall >= 70) return { label: 'Strong', color: '#10b981' }
+  if (overall >= 55) return { label: 'Solid start', color: '#f59e0b' }
+  if (overall >= 40) return { label: 'Getting there', color: '#f59e0b' }
+  return { label: 'Keep building', color: '#ef4444' }
+}
+
 export function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, {
     month: 'short',

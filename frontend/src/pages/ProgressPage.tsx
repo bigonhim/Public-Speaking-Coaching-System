@@ -68,6 +68,20 @@ export function ProgressPage() {
     relevance: p.relevance,
   }))
 
+  const overalls = progress.sessions
+    .map((p) => p.overall)
+    .filter((v): v is number => v !== null)
+  const latest = overalls.at(-1) ?? null
+  const best = overalls.length ? Math.max(...overalls) : null
+  const average = overalls.length
+    ? overalls.reduce((a, b) => a + b, 0) / overalls.length
+    : null
+  const stats: { label: string; value: number | null }[] = [
+    { label: 'Latest', value: latest },
+    { label: 'Best', value: best },
+    { label: 'Average', value: average },
+  ]
+
   return (
     <div className="animate-fade-in space-y-6">
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
@@ -103,9 +117,26 @@ export function ProgressPage() {
               </LineChart>
             </ResponsiveContainer>
           </div>
+          {/* Stat tiles */}
+          <div className="mt-4 grid grid-cols-3 gap-3">
+            {stats.map((s) => (
+              <div key={s.label} className="rounded-xl bg-slate-50 p-3 text-center">
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                  {s.label}
+                </p>
+                <p
+                  className="mt-0.5 text-2xl font-bold tabular-nums"
+                  style={{ color: scoreTone(s.value) }}
+                >
+                  {s.value === null ? '—' : s.value.toFixed(0)}
+                </p>
+              </div>
+            ))}
+          </div>
           {progress.baseline_overall !== null && (
-            <p className="mt-2 text-xs text-slate-400">
-              Baseline (first session): {progress.baseline_overall.toFixed(1)}
+            <p className="mt-3 text-xs text-slate-400">
+              Baseline (first session): {progress.baseline_overall.toFixed(1)} · improvement since:{' '}
+              {latest !== null ? (latest - progress.baseline_overall).toFixed(1) : '—'}
             </p>
           )}
         </section>
