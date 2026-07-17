@@ -1,0 +1,30 @@
+# Filler words. Matching is case-insensitive and whole-token (after stripping
+# surrounding punctuation). Multi-word fillers are matched over consecutive
+# tokens.
+#
+# CALIBRATION NOTE: "like", "so", "well", "right", "actually" are legitimate
+# words and will over-count for some speakers. These defaults are a starting
+# point to be tuned against human ratings — not ground truth. Adjust freely.
+
+single:
+  - um
+  - uh
+  - er
+  - erm
+  - ah
+  - hmm
+  - like
+  - so
+  - actually
+  - basically
+  - literally
+  - honestly
+  - right
+  - well
+  - okay
+
+multi:
+  - [you, know]
+  - [i, mean]
+  - [sort, of]
+  - [kind, of]

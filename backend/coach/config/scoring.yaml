@@ -1,0 +1,72 @@
+# ---------------------------------------------------------------------------
+# Scoring configuration — the SINGLE source of truth for every number the user
+# ever sees. These are STARTING VALUES to be calibrated against human ratings,
+# not ground truth. Change them here; never hardcode a threshold in logic.
+# ---------------------------------------------------------------------------
+
+# Relative importance of each component in the overall score (must sum to 1.0).
+# Relevance is the highest weight: staying on topic is this project's focus.
+weights:
+  pace: 0.25
+  filler: 0.25
+  pause: 0.15
+  relevance: 0.35
+
+# Thresholds used when extracting metrics from word timestamps.
+metrics:
+  pause_min_sec: 0.5   # a gap this long or longer counts as a pause
+  long_pause_sec: 3.0  # a gap this long or longer counts as a "long" pause
+
+# Pace: full marks inside the band, linear falloff outside it.
+pace:
+  target_min: 120
+  target_max: 150
+  falloff_per_wpm: 1.5
+
+# Filler: full marks at/below ideal, zero at/above the ceiling, linear between.
+filler:
+  ideal_max_per_min: 1.0
+  zero_score_per_min: 8.0
+
+# Pause: start at 100 and subtract penalties.
+pause:
+  long_pause_penalty: 15          # per long pause
+  silence_ratio_ceiling: 0.35     # silence above this fraction is penalised
+  silence_penalty_per_point: 100  # penalty = (ratio - ceiling) * this
+  no_pause_penalty: 10            # penalise a wall of speech with no pauses
+
+# Relevance: linear map of raw cosine similarity to 0..100.
+# NOTE: MiniLM sims between a short topic phrase and a long speech are modest;
+# these bounds WILL need calibration. The raw similarity is always stored.
+relevance:
+  sim_floor: 0.15    # at/below -> 0
+  sim_ceiling: 0.55  # at/above -> 100
+
+# Feedback generation (pure, rule-driven).
+feedback:
+  max_notes: 3
+  fast_wpm: 150
+  slow_wpm: 120
+  filler_per_min_warn: 3
+  long_pause_warn: 2
+  relevance_score_warn: 60
+
+# Seven-level progression. See coach/services/levels.py.
+levels:
+  min_session_sec: 45            # L1: at least one session this long
+  l2_min_sessions: 3            # L2: at least this many sessions...
+  l2_improvement: 5             # ...and latest overall >= baseline + this
+  window: 5                     # "last N" window for L3-L7
+  pace_in_range_needed: 3       # L3: >= this many of last N with pace in band
+  filler_ok_needed: 3           # L4: >= this many of last N below filler threshold
+  filler_ok_threshold: 3        # L4: filler_per_min strictly below this
+  relevance_high_needed: 3      # L5: >= this many of last N at/above threshold
+  relevance_high_threshold: 80  # L5: relevance_score at/above this
+  orator:                       # L6
+    sessions_needed: 2
+    overall_min: 80
+    component_score_min: 70     # all four component scores at/above this
+  master:                       # L7
+    of_last: 5
+    needed: 4
+    overall_min: 85

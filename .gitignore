@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+backend/.venv/
+.pytest_cache/
+*.egg-info/
+
+# App data (sqlite db + uploaded audio)
+data/
+
+# Node / frontend
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
