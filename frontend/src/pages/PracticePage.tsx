@@ -168,11 +168,7 @@ export function PracticePage() {
           )}
         </div>
 
-        <VirtualAudience
-          engagement={recording ? live.engagement : 0.7}
-          size={roomSize}
-          forgiveness={forgiveness}
-        />
+        <VirtualAudience engagement={recording ? live.engagement : 0.7} size={roomSize} />
       </section>
 
       {/* Recorder / start */}

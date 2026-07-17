@@ -4,14 +4,17 @@
 // Realism rules (from HANDOFF.md §8): every face has a personal bias and a
 // random reaction delay (300–1200ms), and no face changes expression more than
 // once per ~2s. Lockstep flipping looks broken and destroys the effect.
+//
+// Note: the engagement value already reflects room difficulty (the live-audio
+// hook bakes in "forgiveness"), so this component does not re-apply it.
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AudienceFace } from './AudienceFace'
 import type { FaceState } from './AudienceFace'
 
 interface FaceMeta {
   seed: string
-  bias: number // personal lean added to engagement
+  bias: number // personal lean added to engagement (stable per seat)
   delayMs: number // reaction delay
   lastChange: number
   pendingState: FaceState | null
@@ -20,8 +23,6 @@ interface FaceMeta {
 
 const MIN_CHANGE_INTERVAL = 2000
 
-// Deterministic-ish pseudo random from an index (no Math.random dependency for
-// the seed layout, keeps the crowd stable across renders of the same size).
 function faceState(engagement: number): FaceState {
   if (engagement >= 0.82) return 'nodding'
   if (engagement >= 0.7) return 'attentive'
@@ -30,45 +31,47 @@ function faceState(engagement: number): FaceState {
   return 'distracted'
 }
 
+function buildCrowd(size: number): FaceMeta[] {
+  // Deterministic layout (no Math.random) so the crowd is stable across renders.
+  return Array.from({ length: size }, (_, i) => ({
+    seed: `member-${i}-${size}`,
+    bias: (((i * 37) % 100) / 100) * 0.24 - 0.12, // -0.12..+0.12
+    delayMs: 300 + ((i * 53) % 900), // 300..1200ms
+    lastChange: 0,
+    pendingState: null,
+    pendingSince: 0,
+  }))
+}
+
 interface Props {
   engagement: number
   size: number
-  forgiveness?: number
 }
 
-export function VirtualAudience({ engagement, size, forgiveness = 1 }: Props) {
+export function VirtualAudience({ engagement, size }: Props) {
   const metaRef = useRef<FaceMeta[]>([])
   const [states, setStates] = useState<FaceState[]>([])
   const engagementRef = useRef(engagement)
   engagementRef.current = engagement
 
   // (Re)build the crowd whenever its size changes.
-  useMemo(() => {
-    const metas: FaceMeta[] = Array.from({ length: size }, (_, i) => ({
-      seed: `member-${i}-${size}`,
-      bias: ((i * 37) % 100) / 100 * 0.24 - 0.12, // -0.12..+0.12, stable per seat
-      delayMs: 300 + ((i * 53) % 900), // 300..1200ms
-      lastChange: 0,
-      pendingState: null,
-      pendingSince: 0,
-    }))
-    metaRef.current = metas
-    setStates(metas.map(() => 'neutral'))
-    return metas
+  useEffect(() => {
+    metaRef.current = buildCrowd(size)
+    setStates(metaRef.current.map(() => 'neutral'))
   }, [size])
 
-  // Drive expression changes on a gentle cadence, honouring per-face delay and
-  // the once-per-2s cap.
+  // Drive expression changes on a gentle cadence, honouring each face's
+  // reaction delay and the once-per-2s cap.
   useEffect(() => {
     if (size === 0) return
     const id = window.setInterval(() => {
       const now = performance.now()
-      let changed = false
       setStates((prev) => {
+        let changed = false
         const next = [...prev]
         metaRef.current.forEach((m, i) => {
-          const eff = Math.max(0, Math.min(1, engagementRef.current + m.bias)) * forgiveness
-          const desired = faceState(Math.max(0, Math.min(1, eff)))
+          const eff = Math.max(0, Math.min(1, engagementRef.current + m.bias))
+          const desired = faceState(eff)
           if (desired === next[i]) {
             m.pendingState = null
             return
@@ -91,7 +94,7 @@ export function VirtualAudience({ engagement, size, forgiveness = 1 }: Props) {
       })
     }, 200)
     return () => window.clearInterval(id)
-  }, [size, forgiveness])
+  }, [size])
 
   if (size === 0) {
     return (
