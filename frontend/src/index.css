@@ -9,36 +9,146 @@
   }
 
   body {
-    @apply bg-slate-50 text-slate-800 font-sans antialiased;
+    @apply bg-ink-50 text-ink-800 font-sans antialiased;
   }
 
-  /* Calm, subtle page backdrop used across the app. */
+  /* Aurora-mesh backdrop: bold violet / coral / pink / cyan glows over a tinted
+     periwinkle→lilac→mint base — colourful enough that the white glass cards
+     float on top. A whisper of grid texture keeps it from feeling flat. */
   #root {
+    position: relative;
     min-height: 100vh;
+    isolation: isolate;
     background:
-      radial-gradient(1200px 600px at 80% -10%, rgba(99, 102, 241, 0.10), transparent 60%),
-      radial-gradient(900px 500px at -10% 10%, rgba(16, 185, 129, 0.08), transparent 55%);
+      radial-gradient(56% 48% at 86% -8%, rgba(122, 80, 255, 0.42), transparent 60%),
+      radial-gradient(52% 46% at -10% 4%, rgba(255, 86, 48, 0.30), transparent 58%),
+      radial-gradient(48% 44% at 4% 96%, rgba(236, 72, 153, 0.24), transparent 60%),
+      radial-gradient(66% 58% at 58% 116%, rgba(6, 182, 212, 0.30), transparent 62%),
+      linear-gradient(150deg, #e2ddff 0%, #efe4fb 36%, #ffe6de 66%, #ddf4ff 100%);
+    background-attachment: fixed;
+  }
+
+  /* Faint grid overlay for depth — never interactive. */
+  #root::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background-image:
+      linear-gradient(to right, rgba(122, 80, 255, 0.045) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(122, 80, 255, 0.045) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(70% 60% at 50% 0%, #000 0%, transparent 78%);
+    -webkit-mask-image: radial-gradient(70% 60% at 50% 0%, #000 0%, transparent 78%);
+    pointer-events: none;
+  }
+
+  ::selection {
+    background: rgba(122, 80, 255, 0.22);
+  }
+
+  /* Slimmer, on-brand scrollbar. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(122, 80, 255, 0.35) transparent;
   }
 }
 
 @layer components {
+  /* Surfaces ---------------------------------------------------------------- */
   .card {
-    @apply rounded-2xl bg-white shadow-soft ring-1 ring-slate-900/5;
+    @apply rounded-3xl bg-white/85 shadow-soft ring-1 ring-ink-900/[0.06] backdrop-blur-sm;
   }
 
+  .card-hover {
+    @apply transition duration-300 hover:-translate-y-0.5 hover:shadow-lift;
+  }
+
+  /* A frosted glass panel for headers / overlays. */
+  .glass {
+    @apply bg-white/70 ring-1 ring-white/60 backdrop-blur-xl;
+  }
+
+  /* Centralized gradient recipes for consistency */
+  .bg-gradient-stage-dark {
+    @apply bg-gradient-to-b from-ink-950 via-brand-900 to-ink-900;
+  }
+
+  .bg-gradient-stage-light {
+    @apply bg-gradient-to-b from-ink-100 via-brand-50/60 to-white;
+  }
+
+  /* Error and warning states using theme colors */
+  .alert-error {
+    @apply rounded-2xl border border-accent-200 bg-accent-50/90 px-4 py-3 text-sm text-accent-700 backdrop-blur;
+  }
+
+  .alert-warning {
+    @apply rounded-2xl border border-yellow-200 bg-yellow-50/90 px-4 py-3 text-sm text-yellow-700 backdrop-blur;
+  }
+
+  /* Labels & type ----------------------------------------------------------- */
+  .eyebrow {
+    @apply inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-brand-600;
+  }
+
+  /* Animated gradient keyword — the hero's highlight moment. */
+  .text-gradient {
+    @apply bg-gradient-to-r from-brand-500 via-accent-500 to-brand-500 bg-clip-text text-transparent;
+    background-size: 200% auto;
+    @apply animate-gradient-pan;
+  }
+
+  /* Buttons ----------------------------------------------------------------- */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5
-           font-semibold transition focus:outline-none focus-visible:ring-2
-           focus-visible:ring-brand-400 focus-visible:ring-offset-2 disabled:opacity-50
-           disabled:cursor-not-allowed;
+    @apply inline-flex select-none items-center justify-center gap-2 rounded-full px-5 py-2.5
+           text-sm font-semibold transition duration-200 focus:outline-none
+           focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2
+           focus-visible:ring-offset-ink-50 disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .btn-primary {
-    @apply btn bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-sm
-           hover:from-brand-600 hover:to-brand-800 active:translate-y-px;
+    @apply btn bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-glow
+           hover:-translate-y-0.5 hover:shadow-[0_16px_40px_-8px_rgba(122,80,255,0.6)]
+           active:translate-y-0 disabled:hover:translate-y-0 disabled:shadow-none;
+  }
+
+  .btn-accent {
+    @apply btn bg-gradient-to-br from-accent-400 to-accent-600 text-white shadow-glow-accent
+           hover:-translate-y-0.5 active:translate-y-0;
   }
 
   .btn-ghost {
-    @apply btn bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50;
+    @apply btn bg-white/80 text-ink-700 ring-1 ring-ink-900/10 backdrop-blur
+           hover:bg-white hover:ring-ink-900/20;
+  }
+
+  .btn-dark {
+    @apply btn bg-ink-900 text-white hover:bg-ink-800 hover:-translate-y-0.5 active:translate-y-0;
+  }
+
+  /* Pills & chips ----------------------------------------------------------- */
+  .chip {
+    @apply inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1.5 text-sm
+           font-medium text-ink-600 ring-1 ring-ink-900/[0.07] backdrop-blur;
+  }
+
+  /* Floating stat badge — the signature "context" element. */
+  .stat-badge {
+    @apply flex items-center gap-2.5 rounded-2xl bg-white/90 px-4 py-2.5 shadow-lift
+           ring-1 ring-ink-900/[0.06] backdrop-blur;
+  }
+
+  .dot {
+    @apply inline-block h-2.5 w-2.5 shrink-0 rounded-full;
+  }
+
+  /* The YouTube IFrame API sets width/height attributes on the iframe it
+     creates, which we cannot reach from JSX. Overriding them here is what lets
+     the welcome reel's footage behave like object-fit: cover. */
+  .yt-cover iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
   }
 }

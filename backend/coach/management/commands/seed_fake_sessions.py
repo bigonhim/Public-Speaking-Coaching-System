@@ -8,7 +8,8 @@ is internally consistent and transparent. Use --reset to start clean.
 import random
 from datetime import timedelta
 
-from django.core.management.base import BaseCommand
+from django.contrib.auth.models import User
+from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
 from coach.models import Session, Topic, UserState
@@ -29,22 +30,35 @@ class Command(BaseCommand):
         parser.add_argument("--count", type=int, default=12)
         parser.add_argument("--reset", action="store_true", help="Delete existing sessions/state first.")
         parser.add_argument("--seed", type=int, default=42)
+        parser.add_argument(
+            "--email",
+            help="Account to seed. Omit to fill the pre-accounts 'legacy' bucket.",
+        )
 
     def handle(self, *args, **options):
         count = options["count"]
         rng = random.Random(options["seed"])
         cfg = load_scoring()
 
+        # Resolve the owner first: --reset should only ever wipe their data, not
+        # everyone's.
+        user = None
+        if options["email"]:
+            email = options["email"].strip().lower()
+            user = User.objects.filter(username=email).first()
+            if user is None:
+                raise CommandError(f"No account for {email}. Register in the app first.")
+
         if options["reset"]:
-            Session.objects.all().delete()
-            UserState.objects.all().delete()
+            Session.objects.filter(user=user).delete()
+            UserState.objects.filter(user=user).delete()
 
         topic = Topic.objects.first()
         if topic is None:
             self.stderr.write(self.style.ERROR("No topics found — run `seed_topics` first."))
             return
 
-        state = UserState.load()
+        state = UserState.for_user(user)
         now = timezone.now()
 
         for i in range(count):
@@ -55,6 +69,7 @@ class Command(BaseCommand):
             notes = feedback_mod.build_feedback(metrics, scores, cfg)
 
             session = Session.objects.create(
+                user=user,
                 topic=topic,
                 topic_text=topic.text,
                 audio="",  # synthetic — no audio file
@@ -84,9 +99,9 @@ class Command(BaseCommand):
             if state.baseline_overall is None:
                 state.baseline_overall = scores["overall"]
 
-        # Advance the (monotonic) level against the full, freshly-dated history.
+        # Advance the (monotonic) level against this account's full, freshly-dated history.
         sessions = list(
-            Session.objects.order_by("-created_at").values(
+            Session.objects.filter(user=user).order_by("-created_at").values(
                 "duration_sec", "overall_score", "wpm", "filler_per_min",
                 "relevance_score", "pace_score", "filler_score", "pause_score",
             )
@@ -95,9 +110,11 @@ class Command(BaseCommand):
         state.current_level = max(state.current_level, candidate)
         state.save()
 
+        owner = user.username if user else "the legacy (pre-accounts) bucket"
         self.stdout.write(
             self.style.SUCCESS(
-                f"Created {count} synthetic sessions. Level is now {state.current_level} "
+                f"Created {count} synthetic sessions for {owner}. "
+                f"Level is now {state.current_level} "
                 f"({levels_mod.describe(state.current_level)['name']})."
             )
         )

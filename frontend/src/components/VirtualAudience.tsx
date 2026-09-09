@@ -46,9 +46,13 @@ function buildCrowd(size: number): FaceMeta[] {
 interface Props {
   engagement: number
   size: number
+  /** Face diameter in px. Larger on the immersive stage than the setup preview. */
+  faceSize?: number
+  /** Drop the card chrome (background, spotlight) so faces sit on the stage. */
+  bare?: boolean
 }
 
-export function VirtualAudience({ engagement, size }: Props) {
+export function VirtualAudience({ engagement, size, faceSize = 60, bare = false }: Props) {
   const metaRef = useRef<FaceMeta[]>([])
   const [states, setStates] = useState<FaceState[]>([])
   const engagementRef = useRef(engagement)
@@ -97,33 +101,59 @@ export function VirtualAudience({ engagement, size }: Props) {
   }, [size])
 
   if (size === 0) {
+    if (bare) {
+      return (
+        <div className="flex flex-col items-center justify-center gap-2 text-center">
+          <p className="text-lg font-semibold text-white/90">An empty room</p>
+          <p className="text-sm text-white/50">Just you and the topic — a gentle place to start.</p>
+        </div>
+      )
+    }
     return (
-      <div className="flex h-44 flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white/50 text-center">
-        <div className="mb-1 text-2xl opacity-40">🪑</div>
-        <p className="text-sm font-medium text-slate-500">Empty room</p>
-        <p className="mt-1 text-xs text-slate-400">Just you and the topic — a gentle place to start.</p>
+      <div className="flex h-44 flex-col items-center justify-center rounded-3xl border border-dashed border-ink-200 bg-white/50 text-center">
+        <div className="mb-2 flex gap-1.5" aria-hidden>
+          {[0, 1, 2].map((i) => (
+            <span
+              key={i}
+              className="h-2.5 w-2.5 rounded-full bg-ink-200 animate-float"
+              style={{ animationDelay: `${i * 0.3}s` }}
+            />
+          ))}
+        </div>
+        <p className="text-sm font-semibold text-ink-600">Empty room</p>
+        <p className="mt-1 text-xs text-ink-400">Just you and the topic — a gentle place to start.</p>
       </div>
     )
   }
 
+  // Golden-ratio phase spacing spreads the sway/blink cadences so no two
+  // neighbours move together.
+  const faces = states.map((s, i) => (
+    <AudienceFace
+      key={metaRef.current[i]?.seed ?? i}
+      seed={metaRef.current[i]?.seed ?? `s${i}`}
+      state={s}
+      size={faceSize}
+      phase={(i * 0.618) % 1}
+    />
+  ))
+
+  // Bare: just the crowd, laid out to fill the stage behind it.
+  if (bare) {
+    return (
+      <div className="flex max-w-6xl flex-wrap items-end justify-center gap-4 sm:gap-6">{faces}</div>
+    )
+  }
+
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-slate-100 via-brand-50/50 to-white p-6 pb-9">
+    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-ink-100 via-brand-50/60 to-white p-6 pb-9 ring-1 ring-ink-900/[0.04]">
       {/* soft stage spotlight */}
       <div
         className="pointer-events-none absolute inset-x-0 -top-10 h-40"
-        style={{ background: 'radial-gradient(60% 100% at 50% 0%, rgba(99,102,241,0.14), transparent 70%)' }}
+        style={{ background: 'radial-gradient(60% 100% at 50% 0%, rgba(122,80,255,0.16), transparent 70%)' }}
         aria-hidden
       />
-      <div className="relative flex flex-wrap items-end justify-center gap-4">
-        {states.map((s, i) => (
-          <AudienceFace
-            key={metaRef.current[i]?.seed ?? i}
-            seed={metaRef.current[i]?.seed ?? `s${i}`}
-            state={s}
-            size={60}
-          />
-        ))}
-      </div>
+      <div className="relative flex flex-wrap items-end justify-center gap-4">{faces}</div>
       {/* stage floor */}
       <div
         className="pointer-events-none absolute inset-x-6 bottom-4 h-3 rounded-full"

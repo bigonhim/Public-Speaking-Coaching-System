@@ -3,14 +3,16 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { Topic } from '../api/types'
-import { ApiError, createSession, getLevel, getRandomTopic } from '../api/client'
+import type { LevelState, Topic } from '../api/types'
+import { ApiError, createSession, getLevel, getRandomTopic, getScoringConfig } from '../api/client'
 import { useRecorder } from '../hooks/useRecorder'
 import { useLiveAudio } from '../hooks/useLiveAudio'
+import { useSpeechTranscription } from '../hooks/useSpeechTranscription'
 import { BreathingRitual } from '../components/BreathingRitual'
-import { Recorder } from '../components/Recorder'
+import { StageView } from '../components/StageView'
 import { VirtualAudience } from '../components/VirtualAudience'
 import { Spinner } from '../components/ui/Spinner'
+import { LogoMark } from '../components/ui/Logo'
 import { COMPONENTS } from '../lib/scoring'
 import { ROOM_LABEL, ROOM_SIZES, defaultRoomSize, forgivenessForSize } from '../lib/audience'
 
@@ -24,11 +26,14 @@ export function PracticePage() {
   const [topic, setTopic] = useState<Topic | null>(null)
   const [phase, setPhase] = useState<Phase>('idle')
   const [roomSize, setRoomSize] = useState<number>(3)
+  const [level, setLevel] = useState<LevelState | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loadingTopic, setLoadingTopic] = useState(true)
+  const [minSec, setMinSec] = useState(45)
 
   const forgiveness = forgivenessForSize(roomSize)
   const live = useLiveAudio(recorder.stream, phase === 'recording', { forgiveness })
+  const transcript = useSpeechTranscription(phase === 'recording')
 
   const loadTopic = useCallback(async () => {
     setLoadingTopic(true)
@@ -46,13 +51,22 @@ export function PracticePage() {
   useEffect(() => {
     loadTopic()
     getLevel()
-      .then((l) => setRoomSize(defaultRoomSize(l.current_level)))
+      .then((l) => {
+        setLevel(l)
+        setRoomSize(defaultRoomSize(l.current_level))
+      })
+      .catch(() => {})
+    getScoringConfig()
+      .then((cfg) => setMinSec(cfg.min_session_sec))
       .catch(() => {})
   }, [loadTopic])
 
   const beginRecording = useCallback(async () => {
-    setPhase('recording')
-    await recorder.start()
+    // Enter the stage only once the mic is actually live. Switching first left
+    // a denied permission showing the full-screen stage with a running clock
+    // and nothing listening — the error message was behind the overlay.
+    const started = await recorder.start()
+    setPhase(started ? 'recording' : 'idle')
   }, [recorder])
 
   const startPractice = () => {
@@ -66,6 +80,7 @@ export function PracticePage() {
   const stopAndSubmit = async () => {
     if (!topic) return
     const durationSec = recorder.elapsedSec
+    const mimeType = recorder.mimeType
     const blob = await recorder.stop()
     if (!blob) {
       setError('Recording was empty. Please try again.')
@@ -74,7 +89,7 @@ export function PracticePage() {
     }
     setPhase('submitting')
     try {
-      const id = await createSession(blob, topic.id, durationSec)
+      const id = await createSession(blob, topic.id, durationSec, mimeType)
       navigate(`/results/${id}`)
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Analysis failed. Please try again.')
@@ -95,7 +110,7 @@ export function PracticePage() {
   // --- Submitting ------------------------------------------------------------
   if (phase === 'submitting') {
     return (
-      <div className="card mx-auto max-w-xl p-8">
+      <div className="card mx-auto max-w-xl p-10">
         <Spinner
           label="Analyzing your delivery…"
           sub="Transcribing, measuring pace and fillers, and checking topic relevance. This takes a few seconds."
@@ -104,112 +119,186 @@ export function PracticePage() {
     )
   }
 
-  const recording = phase === 'recording'
+  // --- Recording: the immersive full-screen stage ----------------------------
+  if (phase === 'recording' && topic) {
+    return (
+      <StageView
+        topic={topic.text}
+        roomSize={roomSize}
+        engagement={live.engagement}
+        elapsedSec={recorder.elapsedSec}
+        volume={live.volume}
+        speaking={live.speaking}
+        finalText={transcript.finalText}
+        interim={transcript.interim}
+        transcriptSupported={transcript.supported}
+        onStop={stopAndSubmit}
+        minSec={minSec}
+      />
+    )
+  }
 
   return (
-    <div className="animate-fade-in space-y-6">
+    <div className="space-y-6">
+      {/* Hero — the idle "get set up" state. */}
+      <section className="animate-fade-up relative overflow-hidden rounded-3xl bg-gradient-stage-dark px-6 py-10 text-white shadow-lift sm:px-10 sm:py-12">
+          {/* aurora glows */}
+          <div
+            className="pointer-events-none absolute -right-10 -top-24 h-72 w-72 rounded-full opacity-70 blur-3xl"
+            style={{ background: 'radial-gradient(circle, rgba(255,86,48,0.55), transparent 65%)' }}
+            aria-hidden
+          />
+          <div
+            className="pointer-events-none absolute -bottom-24 left-10 h-72 w-72 rounded-full opacity-60 blur-3xl"
+            style={{ background: 'radial-gradient(circle, rgba(122,80,255,0.6), transparent 65%)' }}
+            aria-hidden
+          />
+
+          <div className="relative flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-xl">
+              <span className="eyebrow text-brand-200">
+                <LogoMark size={18} /> Your AI speaking coach
+              </span>
+              <h1 className="mt-4 font-display text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl">
+                Speak with{' '}
+                <span className="bg-gradient-to-r from-brand-300 via-accent-300 to-brand-200 bg-clip-text text-transparent">
+                  confidence.
+                </span>
+                <br />
+                Every take.
+              </h1>
+              <p className="mt-4 max-w-md text-base leading-relaxed text-white/70">
+                Warm up, speak to a room that reacts in real time, then get honest
+                feedback on pace, fillers and clarity — in about a minute a day.
+              </p>
+            </div>
+
+            {/* Floating live stat chips — real state, not decoration. */}
+            <div className="flex shrink-0 flex-row gap-3 lg:flex-col">
+              <div className="stat-badge animate-float-slow bg-white/95 text-ink-800">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-sm font-bold text-white">
+                  {level?.current_level ?? '–'}
+                </span>
+                <div className="leading-tight">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-ink-400">
+                    Your level
+                  </p>
+                  <p className="text-sm font-bold">{level?.name ?? 'The Novice'}</p>
+                </div>
+              </div>
+              <div className="stat-badge animate-float bg-white/95 text-ink-800">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-accent-400 to-accent-600 text-lg">
+                  🎧
+                </span>
+                <div className="leading-tight">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-ink-400">
+                    Live audience
+                  </p>
+                  <p className="text-sm font-bold">Reacts as you speak</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
       {/* Topic card */}
-      <section className="card overflow-hidden">
-        <div className="bg-gradient-to-r from-brand-600 to-brand-500 px-6 py-3 text-xs font-semibold uppercase tracking-wider text-brand-50">
-          Your topic
+      <section className="card card-hover animate-fade-up overflow-hidden">
+        <div className="flex items-center justify-between bg-gradient-to-r from-brand-600 to-brand-500 px-6 py-2.5">
+          <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/90">
+            Your topic
+          </span>
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-white/70">
+            ~60 seconds
+          </span>
         </div>
         <div className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
           {loadingTopic ? (
-            <p className="text-slate-400">Loading a topic…</p>
+            <p className="text-ink-300">Loading a topic…</p>
           ) : (
-            <p className="text-2xl font-bold leading-snug text-slate-800">{topic?.text}</p>
+            <p className="font-display text-2xl font-bold leading-snug text-ink-900 sm:text-[1.7rem]">
+              {topic?.text}
+            </p>
           )}
-          {!recording && (
-            <button onClick={loadTopic} className="btn-ghost shrink-0 self-start" disabled={loadingTopic}>
-              ↻ New topic
-            </button>
-          )}
+          <button onClick={loadTopic} className="btn-ghost shrink-0 self-start" disabled={loadingTopic}>
+            <span className={loadingTopic ? 'animate-spin' : ''}>↻</span> New topic
+          </button>
         </div>
       </section>
 
       {error && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+        <div className="animate-fade-in alert-error">
           {error}
         </div>
       )}
       {recorder.error && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+        <div className="animate-fade-in alert-warning">
           {recorder.error}
         </div>
       )}
 
       {/* Audience + controls */}
-      <section className="card p-6">
+      <section className="card animate-fade-up p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg font-bold text-slate-800">Your audience</h2>
-            <p className="text-sm text-slate-400">
-              They react to how you sound — never to your words. Build confidence one room at a time.
+            <h2 className="font-display text-lg font-bold text-ink-900">Your audience</h2>
+            <p className="mt-0.5 text-sm text-ink-400">
+              They react to how you <em>sound</em> — never to your words.
             </p>
           </div>
-          {!recording && (
-            <label className="flex items-center gap-2 text-sm text-slate-500">
-              Room
-              <select
-                value={roomSize}
-                onChange={(e) => setRoomSize(Number(e.target.value))}
-                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-700 focus:border-brand-400 focus:outline-none"
-              >
-                {ROOM_SIZES.map((s) => (
-                  <option key={s} value={s}>
-                    {ROOM_LABEL[s]}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
+          <label className="flex items-center gap-2 text-sm text-ink-500">
+            Room
+            <select
+              value={roomSize}
+              onChange={(e) => setRoomSize(Number(e.target.value))}
+              className="rounded-xl border border-ink-900/10 bg-white px-3 py-1.5 font-medium text-ink-700 shadow-sm transition focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-200"
+            >
+              {ROOM_SIZES.map((s) => (
+                <option key={s} value={s}>
+                  {ROOM_LABEL[s]}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
 
-        <VirtualAudience engagement={recording ? live.engagement : 0.7} size={roomSize} />
+        <VirtualAudience
+          engagement={live.engagement}
+          size={roomSize}
+          faceSize={roomSize >= 12 ? 68 : roomSize >= 9 ? 80 : roomSize >= 6 ? 92 : 104}
+        />
       </section>
 
-      {/* Recorder / start */}
-      <section className="card flex flex-col items-center gap-2 p-8">
-        {recording ? (
-          <Recorder
-            elapsedSec={recorder.elapsedSec}
-            volume={live.volume}
-            speaking={live.speaking}
-            onStop={stopAndSubmit}
-          />
-        ) : (
-          <>
-            <p className="text-center text-slate-500">
-              Take a breath, then speak for about a minute. Aim for a natural, steady pace.
-            </p>
-            <button
-              onClick={startPractice}
-              disabled={loadingTopic || !topic}
-              className="btn-primary mt-2 px-10 py-3 text-lg"
-            >
-              ● Start practice
-            </button>
+      {/* Start */}
+      <section className="card animate-fade-up flex flex-col items-center gap-2 p-8">
+        <p className="max-w-md text-center text-ink-500">
+          Take a breath, then speak for about a minute. Aim for a natural, steady pace.
+        </p>
+        <button
+          onClick={startPractice}
+          disabled={loadingTopic || !topic}
+          className="btn-primary group mt-3 px-9 py-3.5 text-base"
+        >
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="absolute inline-flex h-full w-full rounded-full bg-white/70 group-hover:animate-ping" />
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-white" />
+          </span>
+          Start practice
+        </button>
 
-            {/* What we'll measure — sets expectations and reinforces transparency. */}
-            <div className="mt-6 w-full border-t border-slate-100 pt-5">
-              <p className="mb-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-400">
-                What we'll measure
-              </p>
-              <div className="flex flex-wrap items-center justify-center gap-2.5">
-                {COMPONENTS.map((c) => (
-                  <span
-                    key={c.key}
-                    className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1.5 text-sm font-medium text-slate-600 ring-1 ring-slate-100"
-                    title={c.blurb}
-                  >
-                    <span className="h-2.5 w-2.5 rounded-full" style={{ background: c.color }} />
-                    {c.label}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </>
-        )}
+        {/* What we'll measure — sets expectations and reinforces transparency. */}
+        <div className="mt-7 w-full border-t border-ink-900/[0.06] pt-6">
+          <p className="mb-3.5 text-center text-[11px] font-bold uppercase tracking-[0.14em] text-ink-400">
+            What we'll measure
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-2.5">
+            {COMPONENTS.map((c) => (
+              <span key={c.key} className="chip" title={c.blurb}>
+                <span className="dot" style={{ background: c.color }} />
+                {c.label}
+              </span>
+            ))}
+          </div>
+        </div>
       </section>
     </div>
   )

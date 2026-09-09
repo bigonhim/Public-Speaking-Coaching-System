@@ -1,6 +1,18 @@
 // TypeScript mirrors of the Django Ninja response schemas (backend/coach/schemas.py).
 // Kept in lockstep with the API contract in HANDOFF.md §7.
 
+export interface User {
+  id: number
+  name: string
+  email: string
+  /** 1–2 letters for the avatar, derived server-side from the display name. */
+  initials: string
+  joined_at: string
+  session_count: number
+  /** True until the account has analysed its first take. */
+  is_new: boolean
+}
+
 export interface Topic {
   id: number
   text: string
@@ -44,6 +56,7 @@ export interface SessionDetail {
   topic_text: string
   duration_sec: number
   transcript: string
+  audio_url: string | null
   metrics: Metrics
   scores: Scores
   weights: Weights

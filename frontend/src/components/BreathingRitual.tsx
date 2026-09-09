@@ -62,7 +62,7 @@ export function BreathingRitual({ onDone, onAlwaysSkip }: Props) {
   }, [phase])
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-b from-brand-900 via-brand-800 to-slate-900 text-white">
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-b from-brand-950 via-brand-900 to-ink-950 text-white">
       <div className="flex flex-col items-center gap-10 animate-fade-in">
         <div className="relative flex h-72 w-72 items-center justify-center">
           <div className="absolute h-72 w-72 rounded-full bg-brand-400/10" />

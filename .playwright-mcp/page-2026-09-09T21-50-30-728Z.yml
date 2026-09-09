@@ -1,0 +1,74 @@
+- generic [ref=f1e163]:
+  - banner [ref=f1e164]:
+    - generic [ref=f1e166]:
+      - link "Cadence Speaking Coach" [ref=f1e167] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f1e176]:
+          - generic [ref=f1e177]: Cadence
+          - generic [ref=f1e178]: Speaking Coach
+      - generic [ref=f1e179]:
+        - generic "Getting Started — just getting started" [ref=f1e180]:
+          - generic [ref=f1e181]: "0"
+          - generic [ref=f1e182]: Getting Started
+        - navigation [ref=f1e183]:
+          - link "Practice" [ref=f1e184] [cursor=pointer]:
+            - /url: /
+          - link "Progress" [ref=f1e186] [cursor=pointer]:
+            - /url: /progress
+        - button "Account menu for Test Runner" [ref=f1e188] [cursor=pointer]: TR
+  - main [ref=f1e189]:
+    - generic [ref=f1e190]:
+      - generic [ref=f1e192]:
+        - generic [ref=f1e193]:
+          - generic [ref=f1e194]: Your AI speaking coach
+          - heading "Speak with confidence. Every take." [level=1] [ref=f1e202]: Speak with confidence.Every take.
+          - paragraph [ref=f1e203]: Warm up, speak to a room that reacts in real time, then get honest feedback on pace, fillers and clarity — in about a minute a day.
+        - generic [ref=f1e204]:
+          - generic [ref=f1e205]:
+            - generic [ref=f1e206]: "0"
+            - generic [ref=f1e207]:
+              - paragraph [ref=f1e208]: Your level
+              - paragraph [ref=f1e209]: Getting Started
+          - generic [ref=f1e210]:
+            - generic [ref=f1e211]: 🎧
+            - generic [ref=f1e212]:
+              - paragraph [ref=f1e213]: Live audience
+              - paragraph [ref=f1e214]: Reacts as you speak
+      - generic [ref=f1e215]:
+        - generic [ref=f1e216]:
+          - generic [ref=f1e217]: Your topic
+          - generic [ref=f1e218]: ~60 seconds
+        - generic [ref=f1e219]:
+          - paragraph [ref=f1e220]: Is competition healthy or harmful?
+          - button "↻ New topic" [ref=f1e221] [cursor=pointer]:
+            - generic [ref=f1e222]: ↻
+            - text: New topic
+      - generic [ref=f1e224]:
+        - generic [ref=f1e225]:
+          - heading "Your audience" [level=2] [ref=f1e226]
+          - paragraph [ref=f1e227]:
+            - text: They react to how you
+            - emphasis [ref=f1e228]: sound
+            - text: — never to your words.
+        - generic [ref=f1e229]:
+          - text: Room
+          - combobox "Room" [ref=f1e230]:
+            - option "Empty room"
+            - option "Small (3)" [selected]
+            - option "Medium (6)"
+            - option "Large (9)"
+            - option "Full house (12)"
+      - generic [ref=f1e242]:
+        - paragraph [ref=f1e243]: Take a breath, then speak for about a minute. Aim for a natural, steady pace.
+        - button [ref=f1e244] [cursor=pointer]
+        - generic [ref=f1e248]:
+          - paragraph [ref=f1e249]: What we'll measure
+          - generic [ref=f1e250]:
+            - generic "Speaking speed — full marks between 120 and 150 words per minute." [ref=f1e251]: Pace
+            - generic "Fewer “um”, “like” and “you know” means a stronger delivery." [ref=f1e253]: Fillers
+            - generic "Brief pauses help; long silences and dead air cost points." [ref=f1e255]: Pauses
+            - generic "How closely your words stayed on the assigned topic." [ref=f1e257]: Relevance
+  - contentinfo [ref=f1e259]:
+    - generic [ref=f1e260]:
+      - generic [ref=f1e261]: Cadence — speak with confidence, every time.
+      - paragraph [ref=f1e270]: Feedback on pace, fillers, pauses & relevance. Your practice stays yours.

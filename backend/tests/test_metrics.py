@@ -95,3 +95,15 @@ def test_single_word_no_divide_by_zero():
     assert m["word_count"] == 1
     assert m["wpm"] == 0.0            # speaking_time == 0 -> guarded
     assert m["filler_per_min"] == 0.0
+
+
+def test_silence_ratio_clamped_when_duration_is_understated():
+    """duration_sec comes from the browser's own clock.
+
+    When it under-reports the real length, the inter-word gaps can add up to
+    more than the claimed duration — an impossible ratio above 1 that drives
+    the pause score to zero on a bad clock rather than a bad delivery.
+    """
+    words = _words([("one", 0.0, 0.5), ("two", 9.5, 10.0)])
+    m = compute_metrics(words, duration_sec=2.0, cfg=CFG, fillers=FILLERS)
+    assert m["silence_ratio"] == pytest.approx(1.0)

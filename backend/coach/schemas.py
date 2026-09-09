@@ -9,6 +9,35 @@ from datetime import datetime
 from ninja import Schema
 
 
+# --- Auth -------------------------------------------------------------------
+class RegisterIn(Schema):
+    name: str
+    email: str
+    password: str
+
+
+class LoginIn(Schema):
+    email: str
+    password: str
+    remember: bool = True
+
+
+class UserOut(Schema):
+    id: int
+    name: str
+    email: str
+    initials: str
+    joined_at: datetime
+    session_count: int
+    #: True until the account has analysed its first take — the client uses this
+    #: to tailor the welcome cinematic's closing card.
+    is_new: bool
+
+
+class OkOut(Schema):
+    ok: bool
+
+
 class TopicOut(Schema):
     id: int
     text: str
@@ -56,6 +85,7 @@ class SessionDetailOut(Schema):
     topic_text: str
     duration_sec: float
     transcript: str
+    audio_url: str | None
     metrics: MetricsOut
     scores: ScoresOut
     weights: WeightsOut
@@ -100,3 +130,8 @@ class LevelOut(Schema):
     progress_fraction: float
     progress_text: str
     unlocked: list[LevelBadgeOut]
+
+
+class ScoringConfigOut(Schema):
+    weights: dict
+    min_session_sec: int

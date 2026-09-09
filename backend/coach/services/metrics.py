@@ -73,7 +73,12 @@ def compute_metrics(words: list[dict], duration_sec: float, cfg: dict, fillers: 
     gaps = [max(0.0, words[i + 1]["start"] - words[i]["end"]) for i in range(word_count - 1)]
     pause_count = sum(1 for g in gaps if g >= pause_min)
     long_pause_count = sum(1 for g in gaps if g >= long_pause)
-    silence_ratio = (sum(gaps) / duration_sec) if duration_sec > 0 else 0.0
+    # Clamped to [0, 1]: duration_sec is client-reported, and a take whose
+    # audio runs longer than the browser claimed would otherwise report more
+    # silence than there was time — which drives the pause score to zero on a
+    # bad clock rather than on a bad delivery. Inter-word gaps can never really
+    # exceed the recording's own length.
+    silence_ratio = min(1.0, sum(gaps) / duration_sec) if duration_sec > 0 else 0.0
 
     tokens = [_normalize(w["word"]) for w in words]
     filler_count = _count_fillers(tokens, fillers)

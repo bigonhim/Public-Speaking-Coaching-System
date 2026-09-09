@@ -5,7 +5,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import type { SessionDetail } from '../api/types'
-import { ApiError, getSession } from '../api/client'
+import { ApiError, deleteSession, getSession } from '../api/client'
 import { ScoreBreakdown } from '../components/ScoreBreakdown'
 import { Spinner } from '../components/ui/Spinner'
 import { formatDateTime, formatDuration } from '../lib/scoring'
@@ -16,6 +16,8 @@ export function ResultsPage() {
   const [session, setSession] = useState<SessionDetail | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [showTranscript, setShowTranscript] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState(false)
 
   useEffect(() => {
     const sessionId = Number(id)
@@ -28,10 +30,23 @@ export function ResultsPage() {
       .catch((e) => setError(e instanceof ApiError ? e.message : 'Could not load this session.'))
   }, [id])
 
+  const handleDelete = async () => {
+    if (!session) return
+    setDeleting(true)
+    try {
+      await deleteSession(session.id)
+      navigate('/')
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Could not delete this session.')
+      setDeleting(false)
+      setDeleteConfirm(false)
+    }
+  }
+
   if (error) {
     return (
       <div className="card mx-auto max-w-xl p-8 text-center">
-        <p className="text-slate-600">{error}</p>
+        <p className="text-ink-600">{error}</p>
         <button onClick={() => navigate('/')} className="btn-primary mt-4">
           Back to practice
         </button>
@@ -48,44 +63,74 @@ export function ResultsPage() {
   }
 
   return (
-    <div className="animate-fade-in space-y-6">
+    <div className="animate-fade-up space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-1">
-        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Your topic</p>
-        <h1 className="text-2xl font-bold text-slate-800">{session.topic_text}</h1>
-        <p className="text-sm text-slate-400">
-          {formatDateTime(session.created_at)} · {formatDuration(session.duration_sec)} · {session.words.length} words
-        </p>
+      <div className="flex flex-col gap-1.5">
+        <span className="eyebrow">Session results</span>
+        <h1 className="font-display text-3xl font-bold leading-tight tracking-tight text-ink-900">
+          {session.topic_text}
+        </h1>
+        <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-ink-400">
+          <span className="chip py-1">{formatDateTime(session.created_at)}</span>
+          <span className="chip py-1">{formatDuration(session.duration_sec)}</span>
+          <span className="chip py-1">{session.words.length} words</span>
+        </div>
       </div>
 
       <ScoreBreakdown session={session} />
 
+      {/* Audio playback */}
+      {session.audio_url && (
+        <section className="card p-6 sm:p-7">
+          <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-bold text-ink-900">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-100 text-brand-600">
+              🔊
+            </span>
+            Your recording
+          </h2>
+          {/* No <source type=...>: hardcoding audio/webm made a browser skip
+              the track outright whenever the take was recorded as ogg or mp4.
+              The server sends the real content type — trust it. */}
+          <audio controls preload="metadata" src={session.audio_url} className="w-full">
+            Your browser does not support the audio element.
+          </audio>
+        </section>
+      )}
+
       {/* Coaching notes */}
-      <section className="card p-6">
-        <h2 className="mb-3 text-lg font-bold text-slate-800">Coaching notes</h2>
+      <section className="card p-6 sm:p-7">
+        <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-bold text-ink-900">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-100 text-brand-600">
+            ✦
+          </span>
+          Coaching notes
+        </h2>
         <ul className="space-y-3">
           {session.feedback.map((note, i) => (
-            <li key={i} className="flex gap-3 rounded-xl bg-brand-50/60 p-4">
-              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white">
+            <li
+              key={i}
+              className="flex gap-3.5 rounded-2xl bg-gradient-to-br from-brand-50/80 to-white p-4 ring-1 ring-brand-100/70"
+            >
+              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-xs font-bold text-white shadow-glow">
                 {i + 1}
               </span>
-              <p className="text-sm leading-relaxed text-slate-700">{note}</p>
+              <p className="text-sm leading-relaxed text-ink-700">{note}</p>
             </li>
           ))}
         </ul>
       </section>
 
       {/* Transcript */}
-      <section className="card p-6">
+      <section className="card p-6 sm:p-7">
         <button
           onClick={() => setShowTranscript((v) => !v)}
           className="flex w-full items-center justify-between text-left"
         >
-          <span className="text-lg font-bold text-slate-800">Transcript</span>
-          <span className="text-sm text-brand-600">{showTranscript ? 'Hide' : 'Show'}</span>
+          <span className="font-display text-lg font-bold text-ink-900">Transcript</span>
+          <span className="chip py-1 text-brand-600">{showTranscript ? 'Hide' : 'Show'}</span>
         </button>
         {showTranscript && (
-          <p className="mt-3 whitespace-pre-wrap leading-relaxed text-slate-600">
+          <p className="mt-4 whitespace-pre-wrap leading-relaxed text-ink-600 animate-fade-in">
             {session.transcript || 'No speech was detected in this recording.'}
           </p>
         )}
@@ -99,6 +144,43 @@ export function ResultsPage() {
         <Link to="/progress" className="btn-ghost">
           View progress
         </Link>
+        <Link to="/how-its-scored" className="btn-ghost">
+          How it's scored
+        </Link>
+      </div>
+
+      {/* Delete session */}
+      <div className="pt-4 border-t border-ink-900/[0.06]">
+        {deleteConfirm ? (
+          <div className="space-y-3">
+            <p className="text-sm text-ink-600">
+              This will permanently delete this session and its recording. This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="btn bg-accent-500 text-white hover:bg-accent-600 disabled:opacity-50"
+              >
+                {deleting ? 'Deleting…' : 'Yes, delete'}
+              </button>
+              <button
+                onClick={() => setDeleteConfirm(false)}
+                disabled={deleting}
+                className="btn-ghost"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={() => setDeleteConfirm(true)}
+            className="text-sm text-accent-600 hover:text-accent-700 transition"
+          >
+            Delete this session
+          </button>
+        )}
       </div>
     </div>
   )

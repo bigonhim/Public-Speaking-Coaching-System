@@ -22,7 +22,13 @@ export interface RecorderApi {
   elapsedSec: number
   error: string | null
   stream: MediaStream | null
-  start: () => Promise<void>
+  /** The container actually negotiated, e.g. "audio/webm;codecs=opus". Null
+   *  until a recording has started. The upload is named from this so the file
+   *  on disk is not a .webm that is really ogg (or, on Safari, mp4). */
+  mimeType: string | null
+  /** Resolves true when the mic is live. False means `error` explains why —
+   *  the caller must not switch to a recording UI on a false. */
+  start: () => Promise<boolean>
   stop: () => Promise<Blob | null>
   reset: () => void
 }
@@ -32,6 +38,7 @@ export function useRecorder(): RecorderApi {
   const [elapsedSec, setElapsedSec] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [stream, setStream] = useState<MediaStream | null>(null)
+  const [mimeType, setMimeType] = useState<string | null>(null)
 
   const recorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
@@ -49,17 +56,27 @@ export function useRecorder(): RecorderApi {
     s?.getTracks().forEach((t) => t.stop())
   }, [])
 
-  const start = useCallback(async () => {
+  const start = useCallback(async (): Promise<boolean> => {
     setError(null)
     chunksRef.current = []
+
+    let media: MediaStream
     try {
-      const media = await navigator.mediaDevices.getUserMedia({ audio: true })
+      media = await navigator.mediaDevices.getUserMedia({ audio: true })
+    } catch {
+      setError('Microphone access was blocked. Enable it in your browser to record.')
+      setStatus('idle')
+      return false
+    }
+
+    try {
       const recorder = new MediaRecorder(media, { mimeType: pickMimeType() || undefined })
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data)
       }
       recorder.start(250) // gather chunks periodically
       recorderRef.current = recorder
+      setMimeType(recorder.mimeType || null)
       setStream(media)
       startTimeRef.current = performance.now()
       setElapsedSec(0)
@@ -68,11 +85,17 @@ export function useRecorder(): RecorderApi {
       timerRef.current = window.setInterval(() => {
         setElapsedSec((performance.now() - startTimeRef.current) / 1000)
       }, 200)
+      return true
     } catch {
-      setError('Microphone access was blocked. Enable it in your browser to record.')
+      // The mic is already open at this point. Releasing it is not optional:
+      // leaving the tracks live keeps the browser's recording indicator lit
+      // for the rest of the visit with nothing listening to it.
+      stopStream(media)
+      setError('This browser could not start a recording. Try Chrome or Edge.')
       setStatus('idle')
+      return false
     }
-  }, [])
+  }, [stopStream])
 
   const stop = useCallback(async (): Promise<Blob | null> => {
     const recorder = recorderRef.current
@@ -100,6 +123,7 @@ export function useRecorder(): RecorderApi {
     setStatus('idle')
     setElapsedSec(0)
     setError(null)
+    setMimeType(null)
     chunksRef.current = []
   }, [stream, stopStream])
 
@@ -117,6 +141,7 @@ export function useRecorder(): RecorderApi {
     elapsedSec,
     error,
     stream,
+    mimeType,
     start,
     stop,
     reset,

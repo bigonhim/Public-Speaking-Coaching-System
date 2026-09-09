@@ -81,10 +81,49 @@ DATABASES = {
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {"min_length": 8},
+    },
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
+
+# --- Accounts & sessions ----------------------------------------------------
+# The SPA authenticates with Django's session cookie. It is HttpOnly, so no
+# token ever sits in localStorage where any XSS could read it; the trade-off is
+# that unsafe requests must carry the CSRF token, which coach/auth_api.py and
+# the frontend's api/client.ts handle between them.
+AUTHENTICATION_BACKENDS = ["django.contrib.auth.backends.ModelBackend"]
+
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 30  # "remember me" lasts a month
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_SAVE_EVERY_REQUEST = True  # sliding expiry: active speakers stay in
+
+# CSRF_COOKIE_HTTPONLY must stay False — the SPA reads this cookie to mirror it
+# into the X-CSRFToken header. That is the intended double-submit design, not an
+# oversight: the token is useless without the session cookie an attacker cannot read.
+CSRF_COOKIE_HTTPONLY = False
+CSRF_COOKIE_SAMESITE = "Lax"
+
+# Secure cookies whenever we are not in local development.
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+
+# Origins allowed to send us a CSRF token — the Vite dev server in development.
+CSRF_TRUSTED_ORIGINS = os.environ.get(
+    "CSRF_TRUSTED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
+).split(",")
+
+# Login throttle counters live here. LocMemCache is per-process, which is fine
+# for this single-node app; swap for Redis if it is ever run multi-worker.
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "coach-default",
+    }
+}
 
 # --- I18N -------------------------------------------------------------------
 LANGUAGE_CODE = "en-us"
@@ -104,6 +143,11 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 CORS_ALLOWED_ORIGINS = os.environ.get(
     "CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
 ).split(",")
+
+# Cookies must ride along for session auth. This is only safe because the
+# allow-list above is explicit — "*" plus credentials is rejected by browsers,
+# and would be a hole here even if it were not.
+CORS_ALLOW_CREDENTIALS = True
 
 # --- Application-specific ----------------------------------------------------
 # Whisper model size: "small" in dev (fast), "medium" in prod (accurate).

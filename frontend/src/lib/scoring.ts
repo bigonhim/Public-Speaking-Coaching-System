@@ -20,7 +20,7 @@ export const COMPONENTS: ComponentMeta[] = [
   {
     key: 'pace',
     label: 'Pace',
-    color: '#0ea5e9',
+    color: '#06b6d4',
     blurb: 'Speaking speed — full marks between 120 and 150 words per minute.',
     rawMetric: (m) => `${num(m.wpm)} wpm`,
   },
@@ -34,7 +34,7 @@ export const COMPONENTS: ComponentMeta[] = [
   {
     key: 'pause',
     label: 'Pauses',
-    color: '#8b5cf6',
+    color: '#ec4899',
     blurb: 'Brief pauses help; long silences and dead air cost points.',
     rawMetric: (m) =>
       `${num(m.long_pause_count)} long · ${num((m.silence_ratio ?? 0) * 100)}% silence`,
@@ -48,11 +48,11 @@ export const COMPONENTS: ComponentMeta[] = [
   },
 ]
 
-export const OVERALL_COLOR = '#4f46e5'
+export const OVERALL_COLOR = '#7a50ff'
 
 /** Traffic-light colour for a 0..100 score. */
 export function scoreTone(score: number | null): string {
-  if (score === null) return '#94a3b8'
+  if (score === null) return '#d6dae9'
   if (score >= 80) return '#10b981'
   if (score >= 60) return '#f59e0b'
   return '#ef4444'
@@ -60,11 +60,11 @@ export function scoreTone(score: number | null): string {
 
 /** A short qualitative verdict for an overall score. */
 export function verdict(overall: number | null): { label: string; color: string } {
-  if (overall === null) return { label: 'No score', color: '#94a3b8' }
-  if (overall >= 85) return { label: 'Excellent', color: '#059669' }
-  if (overall >= 70) return { label: 'Strong', color: '#10b981' }
+  if (overall === null) return { label: 'No score', color: '#d6dae9' }
+  if (overall >= 85) return { label: 'Excellent', color: '#10b981' }
+  if (overall >= 70) return { label: 'Strong', color: '#06b6d4' }
   if (overall >= 55) return { label: 'Solid start', color: '#f59e0b' }
-  if (overall >= 40) return { label: 'Getting there', color: '#f59e0b' }
+  if (overall >= 40) return { label: 'Getting there', color: '#ec4899' }
   return { label: 'Keep building', color: '#ef4444' }
 }
 
