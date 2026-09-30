@@ -35,3 +35,26 @@ export function consumeWelcomePending(): boolean {
     return false
   }
 }
+
+// Whether the reel plays with sound. localStorage this time: it is a standing
+// preference, asked once on the opening card and honoured on every later
+// sign-in, not something that belongs to a single arrival.
+const SOUND_KEY = 'cadence.welcomeSound'
+
+/** The remembered choice, or null if they have never been asked. */
+export function readSoundPreference(): boolean | null {
+  try {
+    const stored = localStorage.getItem(SOUND_KEY)
+    return stored === null ? null : stored === 'on'
+  } catch {
+    return null
+  }
+}
+
+export function writeSoundPreference(on: boolean): void {
+  try {
+    localStorage.setItem(SOUND_KEY, on ? 'on' : 'off')
+  } catch {
+    /* storage unavailable — they are simply asked again next time */
+  }
+}

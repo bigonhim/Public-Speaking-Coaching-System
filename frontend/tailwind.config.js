@@ -100,17 +100,6 @@ export default {
           '0%, 100%': { transform: 'scaleY(0.32)' },
           '50%': { transform: 'scaleY(1)' },
         },
-        // Words rising into place as a quote is revealed.
-        'word-rise': {
-          '0%': { opacity: '0', transform: 'translateY(0.7em)' },
-          '100%': { opacity: '1', transform: 'translateY(0)' },
-        },
-        // The reel's segmented progress bar. Its animationend event is what
-        // advances the slide, so the duration here is set per-use, not fixed.
-        'progress-fill': {
-          from: { transform: 'scaleX(0)' },
-          to: { transform: 'scaleX(1)' },
-        },
       },
       animation: {
         'fade-in': 'fade-in 0.45s ease-out both',
@@ -124,8 +113,6 @@ export default {
         'audience-nod': 'audience-nod 1.7s ease-in-out infinite',
         breathe: 'breathe 1.8s cubic-bezier(0.22, 1, 0.36, 1) infinite',
         wave: 'wave 1.4s ease-in-out infinite',
-        'word-rise': 'word-rise 0.62s cubic-bezier(0.22, 1, 0.36, 1) both',
-        'progress-fill': 'progress-fill 9s linear forwards',
       },
     },
   },

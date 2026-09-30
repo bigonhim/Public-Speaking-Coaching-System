@@ -105,31 +105,27 @@ in you. It ends by handing you to the dashboard. Skippable at any point (`Esc`),
 replayable from the account menu, and it respects `prefers-reduced-motion` by
 dropping auto-advance and footage entirely.
 
-Everything about the reel lives in
-[`frontend/src/data/voices.ts`](frontend/src/data/voices.ts) — the roster,
-quotes, craft notes, colours, timing and clip sources.
+The roster, quotes, craft notes and colours live in
+[`frontend/src/data/voices.ts`](frontend/src/data/voices.ts).
 
-**About the footage.** Each voice can be backed by a self-hosted file
-(`frontend/public/voices/`, see the README there), a YouTube embed, or nothing —
-in which case a designed generated backdrop carries the slide. The six shipped
-IDs were re-checked on 2026-09-09: all resolve, carry the speech they claim, and
-allow embedding. That can still change — third-party uploads get removed, go
-private, block embedding, or vary by country — so footage is treated as
-unreliable by design. A slide reveals its clip only once the player confirms it
-is *actually playing*; a clip that errors, is blocked, or simply never starts is
-dropped for the rest of the reel and that slide falls back to the backdrop. Set
-`USE_ARCHIVE_FOOTAGE = false` for a typography-only reel with no third-party
-requests at all. If you publish this anywhere public, read the copyright note in
-`frontend/public/voices/README.md` first.
+**About the clips.** Each voice is backed by a short self-hosted clip in
+`frontend/public/voices/`, cut tightly around the quoted sentence. The clip is
+the slide's clock: the slide starts when the clip starts, each word lights at
+the moment it is spoken, and the reel moves on when the clip ends — so the
+sentence you read and the sentence you hear are always the same one. The reel
+opens on a card that asks "with sound or without"; the answer is remembered, and
+a sound control stays in the header on every slide. Nothing is fetched from a
+third party at runtime.
 
-**About the sound.** A slide quotes one specific sentence; the clip behind it is
-a whole speech. Playing a 13-minute address from 0:00 while the screen quotes
-its closing line means you read one sentence and hear another — which is why
-sound is opt-in per clip via `soundSafe` in `voices.ts`. Clips cut tightly
-around their quote (Mandela, Malala, Churchill) offer a "turn on sound" control;
-the longer speeches (King, Obama, Maathai) play as silent wallpaper until
-someone watches them, writes the quote's real offset into `startSeconds` and
-flips the flag. The reel never offers audio it cannot vouch for.
+The clips and their word timings are generated, not hand-cut:
+`uv run tools/build_voices.py` (from `frontend/`) finds each quote inside a
+longer recording by transcribing it, trims the clip, and writes
+`src/data/voiceClips.json`. See
+[`frontend/public/voices/README.md`](frontend/public/voices/README.md) for how
+to change a line or a recording. A voice with no clip, or whose file is missing,
+falls back to a timed slide over a designed generated backdrop; set
+`USE_ARCHIVE_FOOTAGE = false` for that typography-only reel throughout. If you
+publish this anywhere public, read the copyright note in that README first.
 
 ### How auth works
 

@@ -133,6 +133,11 @@ async function authRun() {
   const reel = await authed.newPage()
   watch(reel, 'welcome')
   await reel.goto(`${BASE}/welcome`, { waitUntil: 'networkidle' })
+  await reel.waitForTimeout(1200)
+  await shot(reel, 'a6-welcome-opening.png')
+  // A fresh context has no remembered sound choice, so the reel opens on the
+  // card that asks for one.
+  await reel.getByRole('button', { name: /Begin without sound/i }).click()
   await reel.waitForTimeout(2500)
   await shot(reel, 'a6-welcome-slide1.png')
   await reel.getByRole('button', { name: /Next voice/i }).click()

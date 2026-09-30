@@ -1,0 +1,37 @@
+{
+  "king": {
+    "sources": [
+      "https://www.youtube.com/watch?v=smEqnnklfYs",
+      "https://www.youtube.com/watch?v=8LWuu2Zwsfs"
+    ]
+  },
+  "obama": {
+    "sources": [
+      "https://www.youtube.com/watch?v=okw81WJ9syk",
+      "https://www.youtube.com/watch?v=HwGJzLwRr-w",
+      "https://www.youtube.com/watch?v=R7XvClt6hdE"
+    ]
+  },
+  "mandela": {
+    "sources": [
+      "https://www.youtube.com/watch?v=0KhVzjcb5fI"
+    ],
+    "picture": false
+  },
+  "maathai": {
+    "sources": [
+      "https://www.youtube.com/watch?v=dZap_QlwlKw"
+    ]
+  },
+  "malala": {
+    "sources": [
+      "https://www.youtube.com/watch?v=Eme25t1Add0"
+    ]
+  },
+  "churchill": {
+    "sources": [
+      "https://www.youtube.com/watch?v=MkTw3_PmKtc"
+    ],
+    "picture": false
+  }
+}
