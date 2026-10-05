@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { Clapperboard, LogOut } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext'
 
 export function UserMenu() {
@@ -49,10 +50,7 @@ export function UserMenu() {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={`Account menu for ${user.name}`}
-        className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br
-                   from-ink-700 to-ink-900 text-xs font-bold text-white ring-1 ring-white/40
-                   transition hover:-translate-y-0.5 hover:shadow-lift focus:outline-none
-                   focus-visible:ring-2 focus-visible:ring-brand-400"
+        className={`key h-11 w-11 rounded-full p-0 tracking-[0.04em] ${open ? 'key-on' : ''}`}
       >
         {user.initials}
       </button>
@@ -60,31 +58,32 @@ export function UserMenu() {
       {open && (
         <div
           role="menu"
-          className="animate-fade-in absolute right-0 z-50 mt-2 w-60 overflow-hidden rounded-2xl
-                     bg-white/95 shadow-lift ring-1 ring-ink-900/[0.08] backdrop-blur-xl"
+          className="animate-fade-in absolute right-0 z-50 mt-3 w-64 overflow-hidden rounded-2xl
+                     bg-chassis-top shadow-lift"
         >
-          <div className="border-b border-ink-900/[0.06] px-4 py-3">
-            <p className="truncate font-display text-sm font-bold text-ink-900">{user.name}</p>
-            <p className="truncate text-xs text-ink-400">{user.email}</p>
+          <div className="border-b border-ink-900/[0.08] px-4 py-3">
+            <p className="truncate text-sm font-semibold text-ink-900">{user.name}</p>
+            <p className="truncate font-mono text-[11px] text-ink-500">{user.email}</p>
           </div>
           <div className="p-1.5">
             <button
               role="menuitem"
               onClick={replayIntro}
-              className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm
-                         font-medium text-ink-700 transition hover:bg-ink-900/[0.05]"
+              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm
+                         font-medium text-ink-700 transition-colors hover:bg-ink-900/[0.05]"
             >
-              <span aria-hidden>🎬</span> Replay the greats
+              <Clapperboard size={16} className="text-ink-500" aria-hidden /> Replay the greats
             </button>
             <button
               role="menuitem"
               onClick={handleSignOut}
               disabled={signingOut}
-              className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm
-                         font-medium text-ink-700 transition hover:bg-accent-50 hover:text-accent-700
+              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm
+                         font-medium text-ink-700 transition-colors hover:bg-ink-900/[0.05]
                          disabled:opacity-50"
             >
-              <span aria-hidden>↩</span> {signingOut ? 'Signing out…' : 'Sign out'}
+              <LogOut size={16} className="text-ink-500" aria-hidden />{' '}
+              {signingOut ? 'Signing out…' : 'Sign out'}
             </button>
           </div>
         </div>

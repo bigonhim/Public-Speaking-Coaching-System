@@ -3,12 +3,13 @@
 
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import type { ScoringConfig } from '../api/types'
 import { ApiError, getScoringConfig } from '../api/client'
 import { COMPONENTS, OVERALL_COLOR, verdict } from '../lib/scoring'
 import { Spinner } from '../components/ui/Spinner'
 
 export function HowItsScoredPage() {
-  const [config, setConfig] = useState<{ weights: Record<string, number>; min_session_sec: number } | null>(null)
+  const [config, setConfig] = useState<ScoringConfig | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {

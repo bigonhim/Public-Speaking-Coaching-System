@@ -8,6 +8,7 @@
 import type {
   LevelState,
   Progress,
+  ScoringConfig,
   SessionDetail,
   SessionListItem,
   Topic,
@@ -182,7 +183,7 @@ export function getLevel(): Promise<LevelState> {
   return request<LevelState>('/level')
 }
 
-export function getScoringConfig(): Promise<{ weights: Record<string, number>; min_session_sec: number }> {
+export function getScoringConfig(): Promise<ScoringConfig> {
   return request(`/scoring`)
 }
 

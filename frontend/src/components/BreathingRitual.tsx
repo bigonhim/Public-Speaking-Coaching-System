@@ -6,6 +6,8 @@
 // therapy and makes no claim to treat or cure anxiety.
 
 import { useEffect, useRef, useState } from 'react'
+import { Chassis, Module } from './ui/Hardware'
+import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion'
 
 const CYCLE_MS = 8000 // one inhale + exhale
 const CYCLES = 2
@@ -21,6 +23,7 @@ export function BreathingRitual({ onDone, onAlwaysSkip }: Props) {
   const [label, setLabel] = useState('Breathe in')
   const [count, setCount] = useState(3)
   const doneRef = useRef(false)
+  const reducedMotion = usePrefersReducedMotion()
 
   const finish = () => {
     if (doneRef.current) return
@@ -61,54 +64,64 @@ export function BreathingRitual({ onDone, onAlwaysSkip }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase])
 
+  const breathing = phase === 'breathing'
+  const breathe =
+    breathing && !reducedMotion ? { animation: `breathe ${CYCLE_MS}ms ease-in-out ${CYCLES}` } : undefined
+
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-b from-brand-950 via-brand-900 to-ink-950 text-white">
-      <div className="flex flex-col items-center gap-10 animate-fade-in">
-        <div className="relative flex h-72 w-72 items-center justify-center">
-          <div className="absolute h-72 w-72 rounded-full bg-brand-400/10" />
-          <div
-            className="absolute h-56 w-56 rounded-full bg-brand-400/20"
-            style={
-              phase === 'breathing'
-                ? { animation: `breathe ${CYCLE_MS}ms ease-in-out ${CYCLES}` }
-                : undefined
-            }
-          />
-          <div
-            className="flex h-40 w-40 items-center justify-center rounded-full bg-gradient-to-br from-brand-300 to-brand-500 shadow-2xl"
-            style={
-              phase === 'breathing'
-                ? { animation: `breathe ${CYCLE_MS}ms ease-in-out ${CYCLES}` }
-                : undefined
-            }
-          >
-            {phase === 'countdown' && (
-              <span className="text-6xl font-bold tabular-nums">{count}</span>
-            )}
-          </div>
-        </div>
-
-        <p className="text-2xl font-medium tracking-wide text-brand-50">
-          {phase === 'breathing' ? label : 'Get ready…'}
-        </p>
-        <p className="max-w-sm text-center text-sm text-brand-200/80">
-          Take a moment to settle. When the countdown ends, recording begins.
-        </p>
-      </div>
-
-      <div className="absolute bottom-10 flex items-center gap-6">
-        <button onClick={finish} className="text-brand-100 underline-offset-4 hover:underline">
-          Skip warm-up
-        </button>
-        <button
-          onClick={() => {
-            onAlwaysSkip()
-            finish()
-          }}
-          className="text-sm text-brand-300/80 underline-offset-4 hover:underline"
-        >
-          Always skip
-        </button>
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto bg-canvas"
+      style={{ backgroundImage: 'radial-gradient(ellipse 85% 60% at 30% 0%, #efede8, #d9d6cf 58%, #ccc8c0)' }}
+    >
+      <div className="flex min-h-full items-center justify-center px-4 py-10">
+        <Chassis className="w-full max-w-md animate-fade-in">
+          <Module label="00 · Warm-up" aside={breathing ? 'Two slow breaths' : 'Recording next'}>
+            <div className="lcd flex flex-col items-center gap-6 px-6 py-10" role="status">
+              <div className="relative flex h-56 w-56 items-center justify-center">
+                <span className="absolute inset-0 rounded-full border border-white/10" aria-hidden />
+                <span
+                  className="absolute h-48 w-48 rounded-full"
+                  style={{
+                    background: 'radial-gradient(circle, rgba(255,106,43,0.32), rgba(255,106,43,0) 70%)',
+                    ...breathe,
+                  }}
+                  aria-hidden
+                />
+                <span
+                  className="flex h-32 w-32 items-center justify-center rounded-full border-2 border-lcd-glow"
+                  style={{
+                    boxShadow: '0 0 24px rgba(255,106,43,0.5), inset 0 0 24px rgba(255,106,43,0.25)',
+                    ...breathe,
+                  }}
+                >
+                  {!breathing && (
+                    <span className="lcd-glow font-mono text-6xl font-medium tabular-nums">{count}</span>
+                  )}
+                </span>
+              </div>
+              <p className="font-mono text-lg uppercase tracking-[0.2em] text-lcd-text">
+                {breathing ? label : 'Get ready…'}
+              </p>
+            </div>
+            <p className="mt-4 text-center text-sm leading-relaxed text-ink-500">
+              Take a moment to settle. When the countdown ends, recording begins.
+            </p>
+            <div className="mt-5 flex flex-wrap justify-center gap-3">
+              <button onClick={finish} className="key">
+                Skip warm-up
+              </button>
+              <button
+                onClick={() => {
+                  onAlwaysSkip()
+                  finish()
+                }}
+                className="key"
+              >
+                Always skip
+              </button>
+            </div>
+          </Module>
+        </Chassis>
       </div>
     </div>
   )

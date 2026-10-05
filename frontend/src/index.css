@@ -2,141 +2,337 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Cadence is drawn as a piece of studio hardware: a light machined console
+   sitting on a desk, with recessed modules, dark display windows and physical
+   keys. Depth comes from the materials — bevels, insets and cast shadows —
+   not from colour, so the palette stays to graphite, chassis grey and one
+   signal orange. */
+
 @layer base {
   html {
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
 
-  body {
-    @apply bg-ink-50 text-ink-800 font-sans antialiased;
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
   }
 
-  /* Aurora-mesh backdrop: bold violet / coral / pink / cyan glows over a tinted
-     periwinkle→lilac→mint base — colourful enough that the white glass cards
-     float on top. A whisper of grid texture keeps it from feeling flat. */
+  /* The desk: lit from the top left, falling off toward the corners. */
+  body {
+    @apply bg-canvas font-sans text-ink-900 antialiased;
+    background-image: radial-gradient(ellipse 85% 60% at 30% 0%, #efede8, #d9d6cf 58%, #ccc8c0);
+    background-attachment: fixed;
+  }
+
   #root {
     position: relative;
     min-height: 100vh;
     isolation: isolate;
-    background:
-      radial-gradient(56% 48% at 86% -8%, rgba(122, 80, 255, 0.42), transparent 60%),
-      radial-gradient(52% 46% at -10% 4%, rgba(255, 86, 48, 0.30), transparent 58%),
-      radial-gradient(48% 44% at 4% 96%, rgba(236, 72, 153, 0.24), transparent 60%),
-      radial-gradient(66% 58% at 58% 116%, rgba(6, 182, 212, 0.30), transparent 62%),
-      linear-gradient(150deg, #e2ddff 0%, #efe4fb 36%, #ffe6de 66%, #ddf4ff 100%);
-    background-attachment: fixed;
-  }
-
-  /* Faint grid overlay for depth — never interactive. */
-  #root::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    background-image:
-      linear-gradient(to right, rgba(122, 80, 255, 0.045) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(122, 80, 255, 0.045) 1px, transparent 1px);
-    background-size: 44px 44px;
-    mask-image: radial-gradient(70% 60% at 50% 0%, #000 0%, transparent 78%);
-    -webkit-mask-image: radial-gradient(70% 60% at 50% 0%, #000 0%, transparent 78%);
-    pointer-events: none;
   }
 
   ::selection {
-    background: rgba(122, 80, 255, 0.22);
+    background: rgba(242, 84, 27, 0.25);
   }
 
-  /* Slimmer, on-brand scrollbar. */
   * {
     scrollbar-width: thin;
-    scrollbar-color: rgba(122, 80, 255, 0.35) transparent;
+    scrollbar-color: rgba(29, 28, 26, 0.3) transparent;
   }
 }
 
 @layer components {
+  /* Layout ------------------------------------------------------------------ */
+  .wrap {
+    @apply mx-auto w-full max-w-6xl px-5 sm:px-8;
+  }
+
+  .band {
+    @apply py-20 sm:py-28;
+  }
+
+  /* Hardware ---------------------------------------------------------------- */
+  /* The machined case a screen is built into. */
+  .chassis {
+    position: relative;
+    border-radius: 28px;
+    background: linear-gradient(180deg, #f3f1ec, #e6e3dc);
+    box-shadow:
+      inset 0 1px 0 #fff,
+      inset 0 -2px 0 rgba(0, 0, 0, 0.06),
+      0 0 0 1px rgba(0, 0, 0, 0.07),
+      0 50px 90px -40px rgba(60, 45, 20, 0.45),
+      0 18px 30px -18px rgba(60, 45, 20, 0.35);
+  }
+
+  /* A screw head in a chassis corner. Its slot angle comes from --screw. */
+  .screw {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-radius: 9999px;
+    background: radial-gradient(circle at 35% 30%, #fff, #b5b0a5 75%);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18), 0 1px 0 #fff;
+  }
+
+  .screw::after {
+    content: '';
+    position: absolute;
+    left: 2px;
+    right: 2px;
+    top: 5px;
+    height: 1.5px;
+    background: rgba(0, 0, 0, 0.35);
+    transform: rotate(var(--screw, 35deg));
+  }
+
+  /* A recessed module plate on the chassis. */
+  .plate {
+    border-radius: 18px;
+    background: linear-gradient(180deg, #eae7e1, #e1ded7);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+  }
+
+  /* The printed legend along the top of a module. */
+  .module-label {
+    @apply mb-3.5 flex items-start justify-between gap-3 font-mono text-[11px] font-medium uppercase
+           leading-snug tracking-[0.14em] text-ink-500;
+  }
+
+  /* A dark display window set into a module. The scanlines sit behind the
+     content and the glass glare in front of it, both drawn here so a display
+     needs no extra markup. */
+  .lcd {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-radius: 12px;
+    background: #131512;
+    color: #f1ede2;
+    box-shadow:
+      inset 0 3px 12px rgba(0, 0, 0, 0.7),
+      inset 0 0 0 1px rgba(0, 0, 0, 0.6),
+      0 1px 0 rgba(255, 255, 255, 0.85);
+  }
+
+  .lcd::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 3px);
+  }
+
+  .lcd::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.08), transparent 38%);
+  }
+
+  /* A lit orange readout on a display. */
+  .lcd-glow {
+    color: #ff6a2b;
+    text-shadow: 0 0 18px rgba(255, 90, 31, 0.5), 0 0 2px rgba(255, 150, 100, 0.8);
+  }
+
+  /* Indicator lamps. */
+  .led {
+    @apply inline-block h-[7px] w-[7px] shrink-0 rounded-full;
+    background: #bdb8ad;
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.25);
+  }
+
+  .led-on {
+    background: #ff5b1f;
+    box-shadow: 0 0 8px #ff5b1f;
+  }
+
+  /* Keys -------------------------------------------------------------------- */
+  /* Key shape and lettering. Plain .btn stops here — it is a base that its
+     callers colour with utilities — so only the named variants below get a
+     keycap's surface. */
+  .key,
+  .btn,
+  .btn-primary,
+  .btn-ghost,
+  .btn-accent,
+  .btn-dark {
+    @apply inline-flex select-none items-center justify-center gap-2 whitespace-nowrap rounded-[10px]
+           px-[18px] font-mono text-xs font-medium uppercase tracking-[0.12em]
+           transition-[transform,box-shadow,background] duration-75 focus:outline-none
+           focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2
+           focus-visible:ring-offset-chassis disabled:cursor-not-allowed disabled:opacity-50;
+    min-height: 44px;
+  }
+
+  /* A physical keycap. The old .btn-* names map onto the same keys so every
+     screen picks up the hardware, including ones not yet redesigned. */
+  .key,
+  .btn-primary,
+  .btn-ghost,
+  .btn-accent,
+  .btn-dark {
+    @apply text-ink-900;
+    border: 1px solid #c3beb3;
+    background: linear-gradient(#fbfaf7, #ece9e3);
+    box-shadow: 0 3px 0 #b3aea2, 0 6px 10px -4px rgba(0, 0, 0, 0.25), inset 0 1px 0 #fff;
+  }
+
+  .key:hover:not(:disabled),
+  .btn-ghost:hover:not(:disabled) {
+    background: linear-gradient(#fff, #f1efea);
+  }
+
+  .key:active:not(:disabled),
+  .btn-ghost:active:not(:disabled),
+  .key-on {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 #b3aea2, inset 0 1px 3px rgba(0, 0, 0, 0.12);
+  }
+
+  /* A latched key: pressed in and staying there. */
+  .key-on {
+    background: linear-gradient(#e3e0d9, #eceae4);
+  }
+
+  /* The signal key — the one action a screen is for. */
+  .key-signal,
+  .btn-primary,
+  .btn-accent {
+    @apply font-semibold;
+    border-color: #c23c0c;
+    background: linear-gradient(#ff8a55, #f2541b);
+    box-shadow: 0 4px 0 #9e3208, 0 8px 14px -6px rgba(120, 40, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  }
+
+  .key-signal:hover:not(:disabled),
+  .btn-primary:hover:not(:disabled),
+  .btn-accent:hover:not(:disabled) {
+    background: linear-gradient(#ff9666, #f65e26);
+  }
+
+  .key-signal:active:not(:disabled),
+  .btn-primary:active:not(:disabled),
+  .btn-accent:active:not(:disabled) {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 #9e3208, inset 0 1px 3px rgba(0, 0, 0, 0.2);
+  }
+
+  .key-dark,
+  .btn-dark {
+    color: #f1ede2;
+    border-color: #0f0f0e;
+    background: linear-gradient(#3a3935, #262522);
+    box-shadow: 0 3px 0 #0f0f0e, 0 6px 10px -4px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+
+  /* A smoked-glass key for dark screens (the welcome reel): the same keycap,
+     cut from tinted glass so it reads over moving footage. */
+  .key-glass {
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.24);
+    background: linear-gradient(rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.07));
+    box-shadow:
+      0 3px 0 rgba(0, 0, 0, 0.55),
+      0 8px 18px -8px rgba(0, 0, 0, 0.6),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    --tw-ring-offset-color: #121110;
+  }
+
+  .key-glass:hover:not(:disabled) {
+    background: linear-gradient(rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.12));
+  }
+
+  .key-glass:active:not(:disabled),
+  .key-glass.key-on {
+    transform: translateY(2px);
+    background: linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.16));
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.55), inset 0 1px 3px rgba(0, 0, 0, 0.45);
+  }
+
+  .key-lg,
+  .btn-lg {
+    @apply px-6 text-[13px];
+    min-height: 52px;
+  }
+
+  /* Type -------------------------------------------------------------------- */
+  .h-hero {
+    @apply text-balance font-display text-[2.75rem] font-semibold leading-[1.04] tracking-[-0.035em]
+           text-ink-950 sm:text-6xl lg:text-[4.25rem];
+  }
+
+  .h-section {
+    @apply text-balance font-display text-[2rem] font-semibold leading-[1.1] tracking-[-0.03em]
+           text-ink-950 sm:text-[2.75rem];
+  }
+
+  .lede {
+    @apply text-lg leading-relaxed text-ink-600;
+  }
+
+  .eyebrow {
+    @apply inline-flex items-center gap-1.5 font-mono text-[11px] font-medium uppercase
+           tracking-[0.16em] text-brand-600;
+  }
+
+  .text-gradient {
+    @apply text-brand-600;
+  }
+
   /* Surfaces ---------------------------------------------------------------- */
+  /* A raised panel for screens that are not built as a console yet. */
   .card {
-    @apply rounded-3xl bg-white/85 shadow-soft ring-1 ring-ink-900/[0.06] backdrop-blur-sm;
+    border-radius: 18px;
+    background: linear-gradient(180deg, #f6f5f1, #eeece6);
+    box-shadow:
+      inset 0 1px 0 #fff,
+      0 0 0 1px rgba(0, 0, 0, 0.07),
+      0 18px 30px -22px rgba(60, 45, 20, 0.4);
   }
 
   .card-hover {
-    @apply transition duration-300 hover:-translate-y-0.5 hover:shadow-lift;
+    @apply transition-shadow duration-200;
   }
 
-  /* A frosted glass panel for headers / overlays. */
   .glass {
-    @apply bg-white/70 ring-1 ring-white/60 backdrop-blur-xl;
+    @apply bg-chassis-top/90 backdrop-blur;
   }
 
-  /* Centralized gradient recipes for consistency */
+  /* Dark surfaces: the welcome reel and the sign-in panel. */
   .bg-gradient-stage-dark {
-    @apply bg-gradient-to-b from-ink-950 via-brand-900 to-ink-900;
+    @apply bg-gradient-to-b from-ink-950 via-ink-900 to-ink-950;
   }
 
   .bg-gradient-stage-light {
-    @apply bg-gradient-to-b from-ink-100 via-brand-50/60 to-white;
+    @apply bg-gradient-to-b from-chassis-top to-chassis-bottom;
   }
 
-  /* Error and warning states using theme colors */
   .alert-error {
-    @apply rounded-2xl border border-accent-200 bg-accent-50/90 px-4 py-3 text-sm text-accent-700 backdrop-blur;
+    @apply rounded-xl border border-accent-200 bg-accent-50 px-4 py-3 text-sm text-accent-700;
   }
 
   .alert-warning {
-    @apply rounded-2xl border border-yellow-200 bg-yellow-50/90 px-4 py-3 text-sm text-yellow-700 backdrop-blur;
-  }
-
-  /* Labels & type ----------------------------------------------------------- */
-  .eyebrow {
-    @apply inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-brand-600;
-  }
-
-  /* Animated gradient keyword — the hero's highlight moment. */
-  .text-gradient {
-    @apply bg-gradient-to-r from-brand-500 via-accent-500 to-brand-500 bg-clip-text text-transparent;
-    background-size: 200% auto;
-    @apply animate-gradient-pan;
-  }
-
-  /* Buttons ----------------------------------------------------------------- */
-  .btn {
-    @apply inline-flex select-none items-center justify-center gap-2 rounded-full px-5 py-2.5
-           text-sm font-semibold transition duration-200 focus:outline-none
-           focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2
-           focus-visible:ring-offset-ink-50 disabled:cursor-not-allowed disabled:opacity-50;
-  }
-
-  .btn-primary {
-    @apply btn bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-glow
-           hover:-translate-y-0.5 hover:shadow-[0_16px_40px_-8px_rgba(122,80,255,0.6)]
-           active:translate-y-0 disabled:hover:translate-y-0 disabled:shadow-none;
-  }
-
-  .btn-accent {
-    @apply btn bg-gradient-to-br from-accent-400 to-accent-600 text-white shadow-glow-accent
-           hover:-translate-y-0.5 active:translate-y-0;
-  }
-
-  .btn-ghost {
-    @apply btn bg-white/80 text-ink-700 ring-1 ring-ink-900/10 backdrop-blur
-           hover:bg-white hover:ring-ink-900/20;
-  }
-
-  .btn-dark {
-    @apply btn bg-ink-900 text-white hover:bg-ink-800 hover:-translate-y-0.5 active:translate-y-0;
+    @apply rounded-xl border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-800;
   }
 
   /* Pills & chips ----------------------------------------------------------- */
+  /* A small recessed label, like a stamped plate. */
   .chip {
-    @apply inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1.5 text-sm
-           font-medium text-ink-600 ring-1 ring-ink-900/[0.07] backdrop-blur;
+    @apply inline-flex items-center gap-2 rounded-md px-2.5 py-1 font-mono text-[11px] font-medium
+           uppercase tracking-[0.1em] text-ink-600;
+    background: #e3e0d9;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12), 0 1px 0 rgba(255, 255, 255, 0.8);
   }
 
-  /* Floating stat badge — the signature "context" element. */
   .stat-badge {
-    @apply flex items-center gap-2.5 rounded-2xl bg-white/90 px-4 py-2.5 shadow-lift
-           ring-1 ring-ink-900/[0.06] backdrop-blur;
+    @apply flex items-center gap-2.5 rounded-xl bg-chassis-top px-4 py-2.5 shadow-lift;
   }
 
   .dot {

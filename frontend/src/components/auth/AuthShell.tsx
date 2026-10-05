@@ -93,7 +93,7 @@ export function AuthShell({ eyebrow, title, subtitle, children, footer }: Props)
         />
 
         <div className="relative">
-          <Link to="/login" className="inline-block transition hover:opacity-90">
+          <Link to="/" className="inline-block transition hover:opacity-90">
             <Wordmark tone="light" />
           </Link>
         </div>

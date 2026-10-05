@@ -11,7 +11,7 @@ function BootSplash() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4">
       <LogoMark size={54} animated />
-      <p className="font-display text-sm font-bold tracking-tight text-ink-500">Cadence</p>
+      <p className="font-display text-lg font-semibold tracking-tight text-ink-700">Cadence</p>
       <span className="sr-only" role="status">
         Checking your session…
       </span>
@@ -19,12 +19,21 @@ function BootSplash() {
   )
 }
 
-export function RequireAuth({ children }: { children: React.ReactNode }) {
+interface RequireAuthProps {
+  children: React.ReactNode
+  /** Shown to a signed-out visitor at `/` in place of the redirect to sign-in:
+   *  the address is the landing page for them and the app for everyone else. */
+  publicHome?: React.ReactNode
+}
+
+export function RequireAuth({ children, publicHome }: RequireAuthProps) {
   const { status } = useAuth()
   const location = useLocation()
 
   if (status === 'loading') return <BootSplash />
   if (status === 'anon') {
+    if (publicHome && location.pathname === '/') return <>{publicHome}</>
+
     // Remember where they were headed so sign-in can finish the journey.
     return <Navigate to="/login" state={{ from: location }} replace />
   }

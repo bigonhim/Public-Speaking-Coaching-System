@@ -1,45 +1,44 @@
-// The Cadence brand mark: a rounded gradient tile holding a stylized voice
-// "cadence" — five equalizer bars that read as rhythm/sound. Purely decorative.
+// The Cadence mark: a signal-orange keycap with three level bars cut into it.
+// Purely decorative.
 
 interface Props {
   size?: number
   className?: string
-  /** Gently animate the bars (used on the marketing hero, not in the nav). */
+  /** Gently animate the bars (used on loading states, not in the nav). */
   animated?: boolean
 }
 
-export function LogoMark({ size = 36, className = '', animated = false }: Props) {
+const BARS = [
+  { x: 3.5, h: 10 },
+  { x: 10, h: 18 },
+  { x: 16.5, h: 10 },
+]
+
+export function LogoMark({ size = 24, className = '', animated = false }: Props) {
+  const edge = Math.max(1, Math.round(size * 0.08))
   return (
     <span
-      className={`relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-[30%] bg-gradient-to-br from-brand-500 via-brand-600 to-accent-500 shadow-glow ${className}`}
-      style={{ width: size, height: size }}
+      className={`relative inline-flex shrink-0 items-center justify-center rounded-[24%] ${className}`}
+      style={{
+        width: size,
+        height: size,
+        background: 'linear-gradient(#FF8A55, #E24A14)',
+        boxShadow: `inset 0 -${edge}px 0 rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.4)`,
+      }}
       aria-hidden
     >
-      <svg
-        width={size * 0.62}
-        height={size * 0.62}
-        viewBox="0 0 24 24"
-        fill="none"
-        className="relative"
-      >
-        {[
-          { x: 2, h: 8 },
-          { x: 7, h: 16 },
-          { x: 12, h: 22 },
-          { x: 17, h: 12 },
-          { x: 22, h: 6 },
-        ].map((b, i) => (
+      <svg width={size * 0.6} height={size * 0.6} viewBox="0 0 24 24" fill="none">
+        {BARS.map((b, i) => (
           <rect
             key={b.x}
-            x={b.x - 1.5}
+            x={b.x}
             y={12 - b.h / 2}
-            width="3"
+            width="4"
             height={b.h}
-            rx="1.5"
-            fill="white"
-            fillOpacity={0.92}
+            rx="2"
+            fill="#1D1C1A"
             className={animated ? 'origin-center animate-breathe' : ''}
-            style={animated ? { animationDelay: `${i * 0.16}s` } : undefined}
+            style={animated ? { animationDelay: `${i * 0.18}s`, transformBox: 'fill-box' } : undefined}
           />
         ))}
       </svg>
@@ -48,34 +47,36 @@ export function LogoMark({ size = 36, className = '', animated = false }: Props)
 }
 
 /** Full lockup: mark + wordmark. `tone="light"` is for dark backdrops (the
- *  sign-in stage panel and the welcome reel). */
+ *  sign-in panel and the welcome reel). `tagline` adds the printed
+ *  "Speaking coach" plate used in the app header. */
 export function Wordmark({
-  size = 36,
+  size = 24,
   tone = 'dark',
+  tagline = false,
 }: {
   size?: number
   tone?: 'dark' | 'light'
+  tagline?: boolean
 }) {
-  const light = tone === 'light'
   return (
     <span className="flex items-center gap-2.5">
       <LogoMark size={size} />
-      <span className="flex flex-col leading-none">
-        <span
-          className={`font-display text-lg font-bold tracking-tight ${
-            light ? 'text-white' : 'text-ink-900'
-          }`}
-        >
-          Cadence
-        </span>
-        <span
-          className={`text-[10px] font-semibold uppercase tracking-[0.16em] ${
-            light ? 'text-white/55' : 'text-ink-400'
-          }`}
-        >
-          Speaking Coach
-        </span>
+      <span
+        className={`text-[1.45rem] font-semibold leading-none tracking-[-0.04em] ${
+          tone === 'light' ? 'text-white' : 'text-ink-900'
+        }`}
+      >
+        cadence
       </span>
+      {tagline && (
+        <span
+          className={`ml-1 hidden border-l pl-3 font-mono text-[11px] uppercase tracking-[0.12em] md:inline ${
+            tone === 'light' ? 'border-white/25 text-white/70' : 'border-ink-300 text-ink-500'
+          }`}
+        >
+          Speaking coach
+        </span>
+      )}
     </span>
   )
 }

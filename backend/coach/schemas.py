@@ -132,6 +132,16 @@ class LevelOut(Schema):
     unlocked: list[LevelBadgeOut]
 
 
+class FillersOut(Schema):
+    single: list[str]
+    multi: list[list[str]]
+
+
 class ScoringConfigOut(Schema):
     weights: dict
     min_session_sec: int
+    pace_target_min: float
+    pace_target_max: float
+    pause_min_sec: float
+    long_pause_sec: float
+    fillers: FillersOut

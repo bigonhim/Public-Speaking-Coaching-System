@@ -48,7 +48,7 @@ export const COMPONENTS: ComponentMeta[] = [
   },
 ]
 
-export const OVERALL_COLOR = '#7a50ff'
+export const OVERALL_COLOR = '#F2541B'
 
 /** Traffic-light colour for a 0..100 score. */
 export function scoreTone(score: number | null): string {
@@ -58,14 +58,20 @@ export function scoreTone(score: number | null): string {
   return '#ef4444'
 }
 
+/** The five verdicts, lowest first, each with the score it starts at. */
+export const VERDICT_SCALE = [
+  { min: 0, label: 'Keep building', blurb: 'Early stage. Every practice session helps.', color: '#ef4444' },
+  { min: 40, label: 'Getting there', blurb: 'You’re building the habit. Stay consistent.', color: '#ec4899' },
+  { min: 55, label: 'Solid start', blurb: 'Good foundation. Work on pacing and fillers.', color: '#f59e0b' },
+  { min: 70, label: 'Strong', blurb: 'Very solid. Keep refining the details.', color: '#06b6d4' },
+  { min: 85, label: 'Excellent', blurb: 'Outstanding delivery — you nailed it.', color: '#10b981' },
+] as const
+
 /** A short qualitative verdict for an overall score. */
-export function verdict(overall: number | null): { label: string; color: string } {
-  if (overall === null) return { label: 'No score', color: '#d6dae9' }
-  if (overall >= 85) return { label: 'Excellent', color: '#10b981' }
-  if (overall >= 70) return { label: 'Strong', color: '#06b6d4' }
-  if (overall >= 55) return { label: 'Solid start', color: '#f59e0b' }
-  if (overall >= 40) return { label: 'Getting there', color: '#ec4899' }
-  return { label: 'Keep building', color: '#ef4444' }
+export function verdict(overall: number | null): { label: string; color: string; blurb: string } {
+  if (overall === null) return { label: 'No score', color: '#d6dae9', blurb: 'There was nothing to score.' }
+  const v = [...VERDICT_SCALE].reverse().find((s) => overall >= s.min) ?? VERDICT_SCALE[0]
+  return { label: v.label, color: v.color, blurb: v.blurb }
 }
 
 export function formatDate(iso: string): string {
@@ -82,6 +88,14 @@ export function formatDateTime(iso: string): string {
     hour: '2-digit',
     minute: '2-digit',
   })
+}
+
+/** A running-clock reading: 0:45, 1:03. `pad` gives the console's 00:45. */
+export function formatClock(sec: number, pad = false): string {
+  const whole = Math.max(0, Math.floor(sec))
+  const m = Math.floor(whole / 60)
+  const s = String(whole % 60).padStart(2, '0')
+  return `${pad ? String(m).padStart(2, '0') : m}:${s}`
 }
 
 export function formatDuration(sec: number): string {

@@ -15,6 +15,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { ArrowRight, ChevronLeft, ChevronRight, Pause, Play, Volume2, VolumeX } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext'
 import { QuoteReveal } from '../components/welcome/QuoteReveal'
 import { VoiceBackdrop } from '../components/welcome/VoiceBackdrop'
@@ -357,15 +358,24 @@ export function WelcomePage() {
             <button
               onClick={toggleSound}
               aria-pressed={soundOn}
-              className="btn bg-white/10 px-4 py-2 text-white ring-1 ring-white/20 backdrop-blur hover:bg-white/20"
+              className="key key-glass px-4"
             >
-              <span aria-hidden>{soundOn && hasClip ? '🔊' : '🔇'}</span>
-              {!hasClip ? 'No sound here' : soundOn ? 'Sound on' : 'Sound off'}
+              {soundOn && hasClip ? (
+                <Volume2 size={16} aria-hidden />
+              ) : (
+                <VolumeX size={16} aria-hidden />
+              )}
+              {/* On a phone there is no room for the words beside "Skip
+                  intro", so the icon carries it and the label is kept for
+                  screen readers. */}
+              <span className="sr-only sm:not-sr-only">
+                {!hasClip ? 'No sound here' : soundOn ? 'Sound on' : 'Sound off'}
+              </span>
             </button>
           )}
-          <button onClick={enterApp} className="btn bg-white/10 px-4 py-2 text-white ring-1 ring-white/20 backdrop-blur hover:bg-white/20">
+          <button onClick={enterApp} className="key key-glass px-4">
             Skip intro
-            <span aria-hidden>→</span>
+            <ArrowRight size={16} aria-hidden />
           </button>
         </div>
       </header>
@@ -394,7 +404,7 @@ export function WelcomePage() {
       {/* --- The slide ---------------------------------------------------- */}
       {phase === 'opening' ? (
         <main className="relative z-30 mx-auto flex min-h-[calc(100vh-9rem)] max-w-3xl flex-col items-center justify-center px-5 text-center sm:px-8">
-          <p className="animate-fade-in text-[11px] font-bold uppercase tracking-[0.22em] text-white/45">
+          <p className="animate-fade-in font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-white/65">
             The Hall of Voices
           </p>
           <h1 className="animate-fade-up mt-5 font-display text-3xl font-bold leading-tight tracking-tight sm:text-5xl" style={{ animationDelay: '0.1s' }}>
@@ -408,14 +418,12 @@ export function WelcomePage() {
             {VOICES.length} speakers, one line each, in their own voices. About {roughly(reelLength)}.
           </p>
           <div className="animate-fade-up mt-9 flex flex-wrap items-center justify-center gap-3" style={{ animationDelay: '0.3s' }}>
-            <button onClick={() => begin(true)} autoFocus className="btn-primary px-9 py-3.5 text-base">
-              <span aria-hidden>🔊</span>
+            <button onClick={() => begin(true)} autoFocus className="key key-signal key-lg px-8">
+              <Volume2 size={17} aria-hidden />
               Begin with sound
             </button>
-            <button
-              onClick={() => begin(false)}
-              className="btn bg-white/10 px-6 py-3.5 text-base text-white ring-1 ring-white/20 backdrop-blur hover:bg-white/20"
-            >
+            <button onClick={() => begin(false)} className="key key-glass key-lg px-7">
+              <VolumeX size={17} aria-hidden />
               Begin without sound
             </button>
           </div>
@@ -425,7 +433,7 @@ export function WelcomePage() {
           key={voice.id}
           className="relative z-30 mx-auto flex min-h-[calc(100vh-9rem)] max-w-6xl flex-col justify-center px-5 py-10 sm:px-8"
         >
-          <p className="animate-fade-in text-[11px] font-bold uppercase tracking-[0.22em] text-white/45">
+          <p className="animate-fade-in font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-white/65">
             {String(index + 1).padStart(2, '0')} — {voice.place} · {voice.year}
           </p>
 
@@ -439,22 +447,26 @@ export function WelcomePage() {
           </blockquote>
 
           <div className="animate-fade-up mt-8 flex flex-wrap items-center gap-x-4 gap-y-2" style={{ animationDelay: '0.5s' }}>
-            <span className="h-10 w-1 rounded-full" style={{ background: voice.accent }} aria-hidden />
+            {/* The speaker's own colour stays in the footage wash behind
+                them; the type and rules on top use the console's orange so
+                nothing on screen competes with it. */}
+            <span className="h-10 w-1 rounded-full bg-lcd-glow shadow-[0_0_10px_rgba(255,106,43,0.6)]" aria-hidden />
             <div>
               <p className="font-display text-lg font-bold sm:text-xl">{voice.speaker}</p>
-              <p className="text-sm text-white/50">{voice.occasion}</p>
+              <p className="text-sm text-white/65">{voice.occasion}</p>
             </div>
           </div>
 
-          {/* The craft note: the reason this reel exists rather than a montage. */}
+          {/* The craft note: the reason this reel exists rather than a montage.
+              Drawn as one of the console's displays. */}
           <div
-            className="animate-fade-up mt-9 max-w-xl rounded-2xl bg-white/[0.07] p-5 ring-1 ring-white/10 backdrop-blur-sm"
+            className="animate-fade-up mt-9 max-w-xl rounded-xl bg-lcd/85 p-5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08),0_18px_40px_-20px_rgba(0,0,0,0.8)] backdrop-blur-sm"
             style={{ animationDelay: '0.75s' }}
           >
-            <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em]" style={{ color: voice.accent }}>
-              <LogoMark size={16} /> {voice.craft.technique}
+            <p className="lcd-glow flex items-center gap-2 font-mono text-[11px] font-medium uppercase tracking-[0.16em]">
+              <span className="led led-on" aria-hidden /> {voice.craft.technique}
             </p>
-            <p className="mt-2.5 text-[15px] leading-relaxed text-white/75">{voice.craft.note}</p>
+            <p className="mt-2.5 text-[15px] leading-relaxed text-white/80">{voice.craft.note}</p>
           </div>
         </main>
       ) : (
@@ -488,13 +500,13 @@ export function WelcomePage() {
           <button
             onClick={enterApp}
             autoFocus
-            className="btn-primary animate-fade-up mt-9 px-9 py-3.5 text-base"
+            className="key key-signal key-lg animate-fade-up mt-9 px-8"
             style={{ animationDelay: '0.3s' }}
           >
             Enter the stage
-            <span aria-hidden>→</span>
+            <ArrowRight size={17} aria-hidden />
           </button>
-          <p className="mt-5 text-xs text-white/35" aria-live="polite">
+          <p className="mt-5 text-xs text-white/60" aria-live="polite">
             Taking you in {countdown}…
           </p>
         </main>
@@ -507,26 +519,22 @@ export function WelcomePage() {
             onClick={goBack}
             disabled={index === 0}
             aria-label="Previous voice"
-            className="btn h-10 w-10 bg-white/10 p-0 text-white ring-1 ring-white/20 backdrop-blur hover:bg-white/20 disabled:opacity-30"
+            className="key key-glass h-11 w-11 p-0 disabled:opacity-35"
           >
-            <span aria-hidden>‹</span>
+            <ChevronLeft size={20} aria-hidden />
           </button>
           {!still && (
             <button
               onClick={() => setPaused((p) => !p)}
               aria-label={paused ? 'Resume' : 'Pause'}
               aria-pressed={paused}
-              className="btn h-10 w-10 bg-white/10 p-0 text-white ring-1 ring-white/20 backdrop-blur hover:bg-white/20"
+              className={`key key-glass h-11 w-11 p-0 ${paused ? 'key-on' : ''}`}
             >
-              <span aria-hidden>{paused ? '▶' : '❚❚'}</span>
+              {paused ? <Play size={17} aria-hidden /> : <Pause size={17} aria-hidden />}
             </button>
           )}
-          <button
-            onClick={advance}
-            aria-label="Next voice"
-            className="btn h-10 w-10 bg-white/10 p-0 text-white ring-1 ring-white/20 backdrop-blur hover:bg-white/20"
-          >
-            <span aria-hidden>›</span>
+          <button onClick={advance} aria-label="Next voice" className="key key-glass h-11 w-11 p-0">
+            <ChevronRight size={20} aria-hidden />
           </button>
         </div>
       )}

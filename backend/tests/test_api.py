@@ -191,6 +191,24 @@ def test_level_empty_state(client, db):
     assert body["unlocked"] == []
 
 
+def test_scoring_config_carries_what_the_replay_needs(client, db):
+    # The results replay marks fillers and long pauses from these, so they must
+    # be the scorer's own values, not a second copy.
+    from coach.services.config_loader import load_fillers, load_scoring
+
+    cfg, fillers = load_scoring(), load_fillers()
+    resp = client.get("/api/scoring")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["weights"] == cfg["weights"]
+    assert body["pace_target_min"] == cfg["pace"]["target_min"]
+    assert body["pace_target_max"] == cfg["pace"]["target_max"]
+    assert body["pause_min_sec"] == cfg["metrics"]["pause_min_sec"]
+    assert body["long_pause_sec"] == cfg["metrics"]["long_pause_sec"]
+    assert body["fillers"]["single"] == fillers["single"]
+    assert body["fillers"]["multi"] == fillers["multi"]
+
+
 # --- Authentication ---------------------------------------------------------
 @pytest.mark.parametrize(
     "method,path",

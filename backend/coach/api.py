@@ -262,9 +262,20 @@ def delete_session(request, session_id: int):
 @router.get("/scoring", response=ScoringConfigOut)
 def get_scoring_config(request):
     cfg = load_scoring()
+    fillers = load_fillers()
     return {
         "weights": cfg["weights"],
         "min_session_sec": cfg.get("min_session_sec", 45),
+        # What the results replay needs to mark a take the same way the scorer
+        # measured it, without the frontend keeping its own copy of the lists.
+        "pace_target_min": cfg["pace"]["target_min"],
+        "pace_target_max": cfg["pace"]["target_max"],
+        "pause_min_sec": cfg["metrics"]["pause_min_sec"],
+        "long_pause_sec": cfg["metrics"]["long_pause_sec"],
+        "fillers": {
+            "single": fillers.get("single", []),
+            "multi": fillers.get("multi", []),
+        },
     }
 
 

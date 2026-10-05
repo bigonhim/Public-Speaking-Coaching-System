@@ -101,7 +101,7 @@ export function AudienceFace({ seed, state, size = 60, phase = 0 }: Props) {
 
   return (
     <div
-      className="grid place-items-center overflow-hidden rounded-full bg-white/70 shadow-sm ring-1 ring-ink-900/[0.05]"
+      className="grid place-items-center overflow-hidden rounded-full bg-[#262823] shadow-[inset_0_2px_8px_rgba(0,0,0,0.55)] ring-1 ring-white/[0.07]"
       style={{ width: size, height: size }}
     >
       {/* idle layer — a continuous sway/nod, offset per face via animationDelay */}

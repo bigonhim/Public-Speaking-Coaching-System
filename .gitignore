@@ -37,3 +37,6 @@ frontend/page_*.html
 
 # Screenshots dropped at the repo root by the Playwright UI-audit run.
 /*.png
+
+# Playwright MCP session output (audit screenshots, console logs, page snapshots).
+.playwright-mcp/

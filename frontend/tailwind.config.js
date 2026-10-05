@@ -4,50 +4,69 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        // Distinctive geometric display face — used for headlines, the wordmark
-        // and big numerics so the app has a voice of its own.
-        display: ['"Space Grotesk"', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        // One family in two cuts. Geist carries the interface and the
+        // headlines; Geist Mono is the "printed on the hardware" voice — module
+        // labels, keys and every readout.
+        sans: ['Geist', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['Geist', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        mono: ['"Geist Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
       },
       colors: {
-        // Ink — a warm near-black navy for text, softer than pure slate.
+        // The desk the console sits on, and the console's own surfaces.
+        canvas: '#D9D6CF',
+        chassis: {
+          DEFAULT: '#ECEAE5',
+          top: '#F3F1EC',
+          bottom: '#E6E3DC',
+          plate: '#E6E3DD',
+          well: '#E3E0D9',
+        },
+        // Ink — warm graphite. Named "ink" so every page written against the
+        // old palette still resolves.
         ink: {
-          50: '#f6f7fb', 100: '#eceef6', 200: '#d6dae9', 300: '#b2b9d1',
-          400: '#8790b2', 500: '#646d93', 600: '#4b5377', 700: '#3a4160',
-          800: '#232842', 900: '#141830', 950: '#0b0e20',
+          50: '#F7F6F3', 100: '#EEECE7', 200: '#DDD9D1', 300: '#C3BEB3',
+          400: '#9A958B', 500: '#5F5C55', 600: '#4A4741', 700: '#36342F',
+          800: '#262522', 900: '#1D1C1A', 950: '#121110',
         },
-        // Brand — electric violet. Confident, modern, distinct from the stock
-        // indigo look.
+        // Brand — signal orange, the colour of a lit record button. The only
+        // brand colour. 500 is for fills (with ink text on top); 600 and up
+        // are dark enough for text on the light chassis.
         brand: {
-          50: '#f2f0ff', 100: '#e7e2ff', 200: '#d0c6ff', 300: '#b3a1ff',
-          400: '#9578ff', 500: '#7a50ff', 600: '#6a34f5', 700: '#5a23d8',
-          800: '#4a1eae', 900: '#3d1c88', 950: '#250f56',
+          50: '#FFF3EC', 100: '#FFE3D3', 200: '#FFC3A3', 300: '#FF9C6B',
+          400: '#FF7A3D', 500: '#F2541B', 600: '#C2410C', 700: '#9A3412',
+          800: '#7C2D12', 900: '#5E2208', 950: '#3E1203',
         },
-        // Accent — warm coral. Energy, highlights, the "every time" moment.
+        // Accent — red, reserved for deleting and for errors. Recording is
+        // orange now, so this no longer competes with the brand.
         accent: {
-          50: '#fff2ee', 100: '#ffe1d8', 200: '#ffc3b1', 300: '#ff9c80',
-          400: '#ff7452', 500: '#ff5630', 600: '#ed3813', 700: '#c62a0f',
-          800: '#9c2513', 900: '#7e2416',
+          50: '#FEF3F2', 100: '#FEE4E2', 200: '#FECDCA', 300: '#FDA29B',
+          400: '#F97066', 500: '#F04438', 600: '#D92D20', 700: '#B42318',
+          800: '#912018', 900: '#7A271A',
         },
-        // Semantic component colours — shared by score bars AND charts so the
-        // whole app reads as one system. Tuned to stay distinct from brand.
-        pace: '#06b6d4',      // cyan
-        filler: '#f59e0b',    // amber
-        pause: '#ec4899',     // pink
-        relevance: '#10b981', // emerald
-        overall: '#7a50ff',   // brand-500
+        // The dark display windows set into the console.
+        lcd: {
+          DEFAULT: '#131512',
+          panel: '#1A1C19',
+          off: '#2A2C28',
+          text: '#F1EDE2',
+          soft: '#A9A497',
+          dim: '#8D8A80',
+          glow: '#FF6A2B',
+        },
+        // Semantic component colours — the Progress charts still tell the four
+        // parts apart by hue.
+        pace: '#06b6d4',
+        filler: '#f59e0b',
+        pause: '#ec4899',
+        relevance: '#10b981',
+        overall: '#F2541B',
       },
       boxShadow: {
-        // Soft ambient depth for cards.
-        soft: '0 1px 2px rgba(20, 24, 48, 0.04), 0 12px 32px -12px rgba(37, 15, 86, 0.16)',
-        lift: '0 2px 4px rgba(20, 24, 48, 0.05), 0 24px 48px -16px rgba(37, 15, 86, 0.28)',
-        // Coloured glow for primary CTAs.
-        glow: '0 10px 30px -8px rgba(122, 80, 255, 0.55)',
-        'glow-accent': '0 10px 30px -8px rgba(255, 86, 48, 0.5)',
-      },
-      backgroundImage: {
-        'grid-faint':
-          'linear-gradient(to right, rgba(122,80,255,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(122,80,255,0.05) 1px, transparent 1px)',
+        soft: '0 1px 2px rgba(60, 45, 20, 0.08)',
+        lift: '0 0 0 1px rgba(0, 0, 0, 0.07), 0 18px 34px -18px rgba(60, 45, 20, 0.4)',
+        // Kept as names because the not-yet-redesigned screens reference them.
+        glow: '0 1px 2px rgba(60, 45, 20, 0.2)',
+        'glow-accent': '0 1px 2px rgba(122, 39, 26, 0.2)',
       },
       keyframes: {
         'fade-in': {
@@ -100,6 +119,16 @@ export default {
           '0%, 100%': { transform: 'scaleY(0.32)' },
           '50%': { transform: 'scaleY(1)' },
         },
+        // A hard on/off LED blink, the way hardware does it.
+        blink: {
+          '0%, 49%': { opacity: '1' },
+          '50%, 100%': { opacity: '0.25' },
+        },
+        // The record button breathing out a ring of light while it is live.
+        'rec-ring': {
+          '0%': { boxShadow: '0 0 0 0 rgba(255, 90, 31, 0.55)' },
+          '100%': { boxShadow: '0 0 0 14px rgba(255, 90, 31, 0)' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 0.45s ease-out both',
@@ -113,6 +142,8 @@ export default {
         'audience-nod': 'audience-nod 1.7s ease-in-out infinite',
         breathe: 'breathe 1.8s cubic-bezier(0.22, 1, 0.36, 1) infinite',
         wave: 'wave 1.4s ease-in-out infinite',
+        blink: 'blink 1.2s linear infinite',
+        'rec-ring': 'rec-ring 1.6s ease-out infinite',
       },
     },
   },

@@ -126,8 +126,12 @@ export function useClipDeck({
     if (other && !other.paused) {
       const from = other.volume
       const began = performance.now()
-      const step = (now: number) => {
-        const k = Math.min(1, (now - began) / DUCK_MS)
+      const step = () => {
+        // Read the clock here rather than trusting the frame's timestamp,
+        // which marks when the frame began and can predate `began`. A
+        // negative step would push the volume past 1, which throws — and a
+        // throw here leaves the old clip playing over the new one.
+        const k = Math.min(1, Math.max(0, (performance.now() - began) / DUCK_MS))
         other.volume = from * (1 - k)
         if (k < 1) duck = requestAnimationFrame(step)
         else other.pause()

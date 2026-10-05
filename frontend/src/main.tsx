@@ -4,6 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import './index.css'
 import App from './App.tsx'
 import { PracticePage } from './pages/PracticePage.tsx'
+import { LandingPage } from './pages/LandingPage.tsx'
 import { LoginPage } from './pages/LoginPage.tsx'
 import { RegisterPage } from './pages/RegisterPage.tsx'
 import { Spinner } from './components/ui/Spinner.tsx'
@@ -12,8 +13,8 @@ import { PublicOnly, RequireAuth } from './auth/guards.tsx'
 
 // Route-split the heavier screens: Results/Progress pull in Recharts, which the
 // initial Practice screen shouldn't pay for, and the welcome reel is only ever
-// reached after signing in. Login/Register stay eager — they are the first
-// thing a signed-out visitor sees, so a loading flash there is a bad trade.
+// reached after signing in. Landing/Login/Register stay eager — they are the
+// first thing a signed-out visitor sees, so a loading flash there is a bad trade.
 const ResultsPage = lazy(() =>
   import('./pages/ResultsPage.tsx').then((m) => ({ default: m.ResultsPage })),
 )
@@ -60,7 +61,7 @@ createRoot(document.getElementById('root')!).render(
             />
             <Route
               element={
-                <RequireAuth>
+                <RequireAuth publicHome={<LandingPage />}>
                   <App />
                 </RequireAuth>
               }

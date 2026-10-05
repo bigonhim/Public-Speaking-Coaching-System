@@ -103,5 +103,16 @@ export interface LevelState {
   unlocked: LevelBadge[]
 }
 
+/** GET /scoring — the scorer's own settings (backend/coach/config/*.yaml). */
+export interface ScoringConfig {
+  weights: Weights
+  min_session_sec: number
+  pace_target_min: number
+  pace_target_max: number
+  pause_min_sec: number
+  long_pause_sec: number
+  fillers: { single: string[]; multi: string[][] }
+}
+
 // The four scored components, in display order. `key` matches Scores/Weights.
 export type ComponentKey = 'pace' | 'filler' | 'pause' | 'relevance'

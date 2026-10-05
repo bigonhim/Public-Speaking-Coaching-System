@@ -11,6 +11,15 @@ export const ROOM_LABEL: Record<number, string> = {
   12: 'Full house (12)',
 }
 
+/** One-word captions printed under the room keys. */
+export const ROOM_SHORT: Record<number, string> = {
+  0: 'Empty',
+  3: 'Small',
+  6: 'Medium',
+  9: 'Large',
+  12: 'Full',
+}
+
 /** Default audience size for a level. */
 export function defaultRoomSize(level: number): number {
   if (level <= 2) return 3
