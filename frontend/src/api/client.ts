@@ -12,6 +12,7 @@ import type {
   SessionDetail,
   SessionListItem,
   Topic,
+  TopicChoice,
   User,
 } from './types'
 
@@ -152,13 +153,14 @@ function audioExtension(mimeType: string | null | undefined): string {
 
 export async function createSession(
   audio: Blob,
-  topicId: number,
+  topic: TopicChoice,
   durationSec: number,
   mimeType?: string | null,
 ): Promise<number> {
   const form = new FormData()
   form.append('audio', audio, `take.${audioExtension(mimeType ?? audio.type)}`)
-  form.append('topic_id', String(topicId))
+  if ('topicId' in topic) form.append('topic_id', String(topic.topicId))
+  else form.append('topic_text', topic.topicText)
   form.append('duration_sec', String(durationSec))
   const { session_id } = await request<{ session_id: number }>('/sessions', {
     method: 'POST',

@@ -5,6 +5,7 @@
 // The parent (PracticePage) still owns the recorder and analysis lifecycle —
 // this is presentation.
 
+import { useEffect, useState } from 'react'
 import { VirtualAudience } from './VirtualAudience'
 import { LiveTranscript } from './LiveTranscript'
 import { Chassis, LevelMeter, Module, PaceMeter, RecButton } from './ui/Hardware'
@@ -21,8 +22,14 @@ interface Props {
   finalText: string
   interim: string
   transcriptSupported: boolean
+  /** Stop and score. Only offered once the take has reached minSec. */
   onStop: () => void
+  /** Stop before minSec: the take is thrown away, not scored. */
+  onDiscard: () => void
+  /** Shortest take that gets scored. */
   minSec?: number
+  /** The recorder stops itself here. */
+  maxSec?: number
   /** The scorer's pace band, words a minute. */
   paceTarget?: [number, number]
 }
@@ -31,6 +38,11 @@ interface Props {
 // that it would swing on the first two words.
 const PACE_SETTLE_SEC = 8
 const PACE_SETTLE_WORDS = 8
+// The clock starts counting down this long before the cap.
+const CAP_WARNING_SEC = 60
+// An early STOP has to be pressed twice, within this long, to discard a take:
+// one stray press should not throw away forty seconds of speaking.
+const DISCARD_ARM_MS = 4000
 
 /** Words a minute so far, from the live captions. A rough guide only: the
  *  scored pace comes from the full transcription afterwards. */
@@ -51,10 +63,45 @@ export function StageView({
   interim,
   transcriptSupported,
   onStop,
-  minSec = 45,
+  onDiscard,
+  minSec = 60,
+  maxSec = 600,
   paceTarget = [120, 150],
 }: Props) {
   const belowMin = elapsedSec < minSec
+  const remaining = Math.max(0, maxSec - elapsedSec)
+  const nearCap = !belowMin && remaining <= CAP_WARNING_SEC
+
+  // First early press arms the discard, a second one within the window
+  // confirms it. Reaching the minimum disarms it: STOP now scores.
+  const [discardArmed, setDiscardArmed] = useState(false)
+  useEffect(() => {
+    if (!discardArmed) return
+    const id = window.setTimeout(() => setDiscardArmed(false), DISCARD_ARM_MS)
+    return () => window.clearTimeout(id)
+  }, [discardArmed])
+  useEffect(() => {
+    if (!belowMin) setDiscardArmed(false)
+  }, [belowMin])
+
+  const pressStop = () => {
+    if (!belowMin) onStop()
+    else if (discardArmed) onDiscard()
+    else setDiscardArmed(true)
+  }
+
+  const clockNote = belowMin
+    ? `${formatClock(minSec - elapsedSec, true)} to go`
+    : nearCap
+      ? `${formatClock(remaining, true)} left`
+      : 'scoring · keep going'
+  const stopNote = belowMin
+    ? discardArmed
+      ? `Press again to discard · takes under ${formatClock(minSec)} are not scored`
+      : `Keep going · scored from ${formatClock(minSec)}`
+    : nearCap
+      ? `Stops and scores itself at ${formatClock(maxSec)}`
+      : 'Press to stop · scored when you stop'
   const wpm = transcriptSupported ? livePace(finalText, interim, elapsedSec) : null
   // Smaller faces for a fuller house so the crowd still fits the monitor.
   const faceSize = roomSize >= 12 ? 72 : roomSize >= 9 ? 84 : roomSize >= 6 ? 96 : 116
@@ -110,7 +157,7 @@ export function StageView({
                     {formatClock(elapsedSec, true)}
                   </span>
                   <span className="text-xs uppercase tracking-[0.12em] text-lcd-dim">
-                    {belowMin ? `min ${formatClock(minSec, true)}` : 'long enough to score'}
+                    {clockNote}
                   </span>
                 </div>
                 <div className="mt-auto pt-4">
@@ -134,9 +181,16 @@ export function StageView({
                 </span>
               </div>
               <div className="flex flex-col items-center gap-3.5">
-                <RecButton live onClick={onStop} label="Stop and score this take" />
-                <span className="max-w-[240px] text-center font-mono text-[10.5px] uppercase tracking-[0.14em] text-ink-500">
-                  {belowMin ? `Aim for at least ${minSec}s for a full read` : 'Press to stop · scored when you stop'}
+                <RecButton
+                  live
+                  onClick={pressStop}
+                  label={belowMin ? 'Stop and discard this take' : 'Stop and score this take'}
+                />
+                <span
+                  aria-live="polite"
+                  className="max-w-[240px] text-center font-mono text-[10.5px] uppercase tracking-[0.14em] text-ink-500"
+                >
+                  {stopNote}
                 </span>
               </div>
               <div className="flex w-full max-w-[280px] flex-col items-center gap-2.5">

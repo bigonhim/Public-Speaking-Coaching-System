@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { ScoringConfig } from '../api/types'
 import { ApiError, getScoringConfig } from '../api/client'
-import { COMPONENTS, OVERALL_COLOR, verdict } from '../lib/scoring'
+import { COMPONENTS, OVERALL_COLOR, formatClock, verdict } from '../lib/scoring'
 import { Spinner } from '../components/ui/Spinner'
 
 export function HowItsScoredPage() {
@@ -131,8 +131,33 @@ export function HowItsScoredPage() {
       <section className="card p-6 sm:p-7">
         <h2 className="mb-3 font-display text-lg font-bold text-ink-900">Minimum recording time</h2>
         <p className="text-sm text-ink-600">
-          We ask for a minimum of <span className="font-semibold">{config.min_session_sec} seconds</span> per recording so there's enough material
-          to measure pacing, pauses, and topic coverage fairly. Shorter recordings won't be analyzed.
+          A take needs at least <span className="font-semibold">{formatClock(config.min_session_sec)}</span> to be scored. Under that
+          there isn't enough speech to measure pacing, pauses, and topic coverage fairly, so shorter takes are discarded
+          rather than given an unreliable score. Past the minimum, keep going as long as you like: longer takes give the
+          scorer more to work with. The recorder stops and scores on its own at{' '}
+          <span className="font-semibold">{formatClock(config.max_session_sec)}</span>.
+        </p>
+      </section>
+
+      {/* Own topics */}
+      <section className="card p-6 sm:p-7">
+        <h2 className="mb-3 font-display text-lg font-bold text-ink-900">Speaking on your own topic</h2>
+        <p className="text-sm text-ink-600">
+          Choose <span className="font-semibold">My own</span> on the practice screen to talk about anything you like
+          ({config.custom_topic_min_chars}–{config.custom_topic_max_chars} characters). The take is scored exactly the same
+          way, with relevance measured against the topic you typed.
+        </p>
+        <p className="mt-3 text-sm text-ink-600">
+          Own-topic takes appear in your history and trends, and they{' '}
+          <span className="font-semibold">count towards the delivery levels</span>: The Novice (one take of{' '}
+          {formatClock(config.min_session_sec)} or more), The Speaker (pace) and The Communicator (fillers). Those levels only look at
+          how you spoke, so the topic doesn't matter.
+        </p>
+        <p className="mt-3 text-sm text-ink-600">
+          The other levels (The Apprentice, The Persuader, The Orator and The Master Orator) depend on relevance, which is{' '}
+          {Math.round((config.weights.relevance ?? 0) * 100)}% of the score. A topic you wrote yourself could simply echo
+          what you planned to say, so <span className="font-semibold">only randomly drawn topics count towards them</span>,
+          where nobody can tune the question to the answer. Your baseline is also taken from your first random-topic take.
         </p>
       </section>
 

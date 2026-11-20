@@ -168,7 +168,7 @@ async function staticRun() {
   await shot(page, '01-practice-desktop.png')
 
   // Ritual overlay
-  await page.getByRole('button', { name: /Start practice/i }).click()
+  await page.getByRole('button', { name: /Begin a take/i }).click()
   await page.waitForTimeout(1200)
   await shot(page, '02-ritual.png')
   // Skip into the recording state
@@ -200,16 +200,31 @@ async function recordRun() {
   await page.goto(BASE, { waitUntil: 'networkidle' })
   // Skip ritual permanently for a fast path
   await page.evaluate(() => localStorage.setItem('coach.skipRitual', '1'))
-  await page.getByRole('button', { name: /Start practice/i }).click()
+  await page.getByRole('button', { name: /Begin a take/i }).click()
   await page.waitForTimeout(4000) // record ~4s of fake audio
   await shot(page, '06-recording-live.png')
-  await page.getByRole('button', { name: /Stop & analyze/i }).click()
+  await page.getByRole('button', { name: /Stop and score/i }).click()
   await page.waitForTimeout(800)
   await shot(page, '07-analyzing.png')
   // Wait for navigation to results (real Whisper — allow time)
   await page.waitForURL(/\/results\/\d+/, { timeout: 90000 })
   await page.waitForTimeout(1500)
   await shot(page, '08-results.png')
+
+  // Own topic: type a prompt instead of drawing one.
+  await page.goto(BASE, { waitUntil: 'networkidle' })
+  await page.getByRole('button', { name: /My own/i }).click()
+  await page.getByLabel('Your topic').fill('Why everyone should learn to cook')
+  await page.waitForTimeout(400)
+  await shot(page, '09-own-topic.png')
+  await page.getByRole('button', { name: /Begin a take/i }).click()
+  await page.waitForTimeout(4000)
+  await page.getByRole('button', { name: /Stop and score/i }).click()
+  await page.waitForURL(/\/results\/\d+/, { timeout: 90000 })
+  await page.waitForTimeout(1500)
+  await shot(page, '10-own-topic-results.png')
+  // Leave the next run on the default mode.
+  await page.evaluate(() => localStorage.setItem('coach.topicMode', 'random'))
   await ctx.close()
 }
 

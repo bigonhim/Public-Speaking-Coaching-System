@@ -135,7 +135,7 @@ def test_get_session_detail_shape(client, topic, media_tmp, mock_analysis):
     resp = client.get(f"/api/sessions/{session_id}")
     assert resp.status_code == 200
     body = resp.json()
-    assert set(body) >= {"id", "created_at", "topic_text", "duration_sec",
+    assert set(body) >= {"id", "created_at", "topic_text", "topic_source", "duration_sec",
                          "transcript", "metrics", "scores", "weights",
                          "feedback", "words"}
     assert set(body["weights"]) == {"pace", "filler", "pause", "relevance"}
@@ -156,7 +156,8 @@ def test_list_sessions(client, topic, media_tmp, mock_analysis):
     assert resp.status_code == 200
     items = resp.json()
     assert len(items) == 2
-    assert set(items[0]) == {"id", "created_at", "topic_text", "overall_score"}
+    assert set(items[0]) == {"id", "created_at", "topic_text", "topic_source", "overall_score"}
+    assert items[0]["topic_source"] == "random"
 
 
 def test_progress_endpoint(client, topic, media_tmp, mock_analysis):
@@ -168,7 +169,8 @@ def test_progress_endpoint(client, topic, media_tmp, mock_analysis):
     assert body["baseline_overall"] is not None
     assert len(body["sessions"]) == 1
     assert set(body["sessions"][0]) == {"created_at", "overall", "pace",
-                                        "filler", "pause", "relevance"}
+                                        "filler", "pause", "relevance",
+                                        "topic_source"}
 
 
 def test_level_endpoint(client, topic, media_tmp, mock_analysis):
@@ -205,6 +207,9 @@ def test_scoring_config_carries_what_the_replay_needs(client, db):
     assert body["pace_target_max"] == cfg["pace"]["target_max"]
     assert body["pause_min_sec"] == cfg["metrics"]["pause_min_sec"]
     assert body["long_pause_sec"] == cfg["metrics"]["long_pause_sec"]
+    # Read from the YAML, not a hardcoded fallback (it used to be stuck at 45).
+    assert body["min_session_sec"] == cfg["session"]["min_graded_sec"]
+    assert body["max_session_sec"] == cfg["session"]["max_sec"]
     assert body["fillers"]["single"] == fillers["single"]
     assert body["fillers"]["multi"] == fillers["multi"]
 
@@ -313,5 +318,51 @@ def test_create_session_rejects_impossible_duration(
     persisted and scored.
     """
     resp = _post_session(client, topic, duration=duration)
+    assert resp.status_code == 400
+    assert Session.objects.count() == 0
+
+
+# --- Take length ------------------------------------------------------------
+def test_take_under_the_minimum_is_not_scored(client, topic, media_tmp, mock_analysis):
+    """Under a minute there is too little speech to measure fairly, so the take
+    is refused outright rather than stored with an unreliable score."""
+    from coach.services.config_loader import load_scoring
+
+    min_sec = load_scoring()["session"]["min_graded_sec"]
+    resp = _post_session(client, topic, duration=min_sec - 10)
+    assert resp.status_code == 400
+    assert "at least" in resp.json()["detail"]
+    assert Session.objects.count() == 0
+
+
+def test_long_take_is_scored(client, topic, media_tmp, mock_analysis):
+    """Past the minimum a speaker can keep going: a five-minute take scores."""
+    resp = _post_session(client, topic, duration=300.0)
+    assert resp.status_code == 201
+    assert Session.objects.get().duration_sec == 300.0
+
+
+def test_take_over_the_cap_is_refused(client, topic, media_tmp, mock_analysis):
+    from coach.services.config_loader import load_scoring
+
+    max_sec = load_scoring()["session"]["max_sec"]
+    resp = _post_session(client, topic, duration=max_sec + 30)
+    assert resp.status_code == 400
+    assert Session.objects.count() == 0
+
+
+def test_short_audio_with_a_long_claimed_duration_is_refused(
+    client, topic, media_tmp, mock_analysis, monkeypatch
+):
+    """duration_sec is the browser's claim; the decoded file is the evidence.
+    A ten-second recording sent as 'sixty seconds' must not be scored."""
+    real = transcription.transcribe
+
+    def short_audio(path):
+        out = real(path)
+        return {**out, "audio_sec": 10.0}
+
+    monkeypatch.setattr(transcription, "transcribe", short_audio)
+    resp = _post_session(client, topic, duration=60.0)
     assert resp.status_code == 400
     assert Session.objects.count() == 0

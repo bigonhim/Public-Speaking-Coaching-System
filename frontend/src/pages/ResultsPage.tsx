@@ -148,6 +148,17 @@ export function ResultsPage() {
       <div className="mb-6 px-0.5">
         <p className="font-mono text-xs uppercase tracking-[0.08em] text-ink-500">
           {formatDateTime(session.created_at)} · {formatClock(session.duration_sec)} · {session.words.length} words
+          {session.topic_source === 'custom' && (
+            <>
+              {' · '}
+              <span
+                className="text-accent-700"
+                title="Own-topic takes count towards the delivery levels (1, 3 and 4), not the relevance-based ones"
+              >
+                Your topic · delivery levels only
+              </span>
+            </>
+          )}
         </p>
         <h1 className="mt-2 max-w-4xl text-balance text-[1.6rem] font-semibold leading-tight tracking-[-0.025em] text-ink-950 sm:text-[2rem]">
           {session.topic_text}

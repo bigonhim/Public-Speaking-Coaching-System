@@ -12,6 +12,16 @@ weights:
   pause: 0.15
   relevance: 0.35
 
+# How long a take may run. Below the minimum a take is not scored at all: under
+# a minute there is too little speech to measure pace, pauses and topic
+# coverage fairly. Above it, speakers can keep going as long as they like up
+# to the cap, where the recorder stops on its own. The cap is there because
+# transcription runs on CPU while the request waits: ten minutes of speech
+# already takes a while to analyse.
+session:
+  min_graded_sec: 60   # takes shorter than this are refused, not scored
+  max_sec: 600         # the recorder auto-stops here; the server refuses longer
+
 # Thresholds used when extracting metrics from word timestamps.
 metrics:
   pause_min_sec: 0.5   # a gap this long or longer counts as a pause
@@ -53,7 +63,7 @@ feedback:
 
 # Seven-level progression. See coach/services/levels.py.
 levels:
-  min_session_sec: 45            # L1: at least one session this long
+  min_session_sec: 60            # L1: at least one session this long (keep >= session.min_graded_sec)
   l2_min_sessions: 3            # L2: at least this many sessions...
   l2_improvement: 5             # ...and latest overall >= baseline + this
   window: 5                     # "last N" window for L3-L7

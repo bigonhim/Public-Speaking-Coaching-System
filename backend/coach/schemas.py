@@ -83,6 +83,7 @@ class SessionDetailOut(Schema):
     id: int
     created_at: datetime
     topic_text: str
+    topic_source: str  # "random" | "custom"
     duration_sec: float
     transcript: str
     audio_url: str | None
@@ -97,6 +98,7 @@ class SessionListItemOut(Schema):
     id: int
     created_at: datetime
     topic_text: str
+    topic_source: str
     overall_score: float | None
 
 
@@ -107,6 +109,7 @@ class ProgressPointOut(Schema):
     filler: float | None
     pause: float | None
     relevance: float | None
+    topic_source: str
 
 
 class ProgressOut(Schema):
@@ -140,6 +143,9 @@ class FillersOut(Schema):
 class ScoringConfigOut(Schema):
     weights: dict
     min_session_sec: int
+    max_session_sec: int
+    custom_topic_min_chars: int
+    custom_topic_max_chars: int
     pace_target_min: float
     pace_target_max: float
     pause_min_sec: float

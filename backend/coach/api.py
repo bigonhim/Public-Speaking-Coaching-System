@@ -45,9 +45,29 @@ _LEVEL_FIELDS = (
     "relevance_score", "pace_score", "filler_score", "pause_score",
 )
 
+# Bounds on a speaker's own prompt. It should read like a topic ("Why I love
+# chess"), not a pasted speech: relevance is measured against this text.
+CUSTOM_TOPIC_MIN_CHARS = 5
+CUSTOM_TOPIC_MAX_CHARS = 150
+
 # `duration_sec` is client-reported: it is the denominator of silence_ratio and
-# the gate on the level-1 unlock, so it is not something to take on trust.
-MAX_DURATION_SEC = 60 * 60  # an hour is already absurd for a practice take
+# the gate on the level-1 unlock, so it is not something to take on trust. The
+# bounds live in scoring.yaml (`session`). The browser's clock and the decoded
+# audio can disagree by a moment (chunking, the timer tick), so both checks
+# allow this much slack.
+DURATION_GRACE_SEC = 2.0
+
+
+def _session_bounds(cfg: dict) -> tuple[float, float]:
+    """(minimum length that gets scored, maximum length accepted), seconds."""
+    sess = cfg["session"]
+    return float(sess["min_graded_sec"]), float(sess["max_sec"])
+
+
+def _clock(sec: float) -> str:
+    """60 -> "1:00", for error messages a speaker reads."""
+    whole = int(sec)
+    return f"{whole // 60}:{whole % 60:02d}"
 
 # Containers MediaRecorder can produce. Anything else is served as a download
 # rather than guessed at.
@@ -67,6 +87,23 @@ def _sessions_of(request):
     return Session.objects.filter(user=request.user)
 
 
+def _leveling_sessions(user) -> tuple[list[dict], list[dict]]:
+    """The two pools levels are judged on, newest first:
+    (random-topic takes, every take).
+
+    Own-topic takes count only towards the DELIVERY levels (duration, pace,
+    fillers). The speaker wrote the prompt that relevance (35%) is measured
+    against, so letting those takes reach any relevance-based level would let
+    anyone climb by echoing their own speech. The filtering lives here so
+    levels.py stays pure and unaware of where topics come from.
+    """
+    every = list(
+        Session.objects.filter(user=user).order_by("-created_at").values(*_LEVEL_FIELDS, "topic_source")
+    )
+    random_only = [s for s in every if s["topic_source"] == Session.SOURCE_RANDOM]
+    return random_only, every
+
+
 # --- Topics -----------------------------------------------------------------
 @router.get("/topics/random", response=TopicOut)
 def random_topic(request, category: str = "general"):
@@ -81,35 +118,75 @@ def random_topic(request, category: str = "general"):
 def create_session(
     request,
     audio: UploadedFile = File(...),
-    topic_id: int = Form(...),
     duration_sec: float = Form(...),
+    topic_id: int | None = Form(None),
+    topic_text: str | None = Form(None),
 ):
     """Capture a recording and run the full synchronous analysis pipeline:
-    transcribe -> metrics -> relevance -> score -> feedback -> level update."""
-    topic = Topic.objects.filter(id=topic_id).first()
-    if topic is None:
-        raise HttpError(404, f"Topic {topic_id} does not exist.")
+    transcribe -> metrics -> relevance -> score -> feedback -> level update.
 
+    The take answers exactly one of: a seeded topic (`topic_id`) or the
+    speaker's own prompt (`topic_text`)."""
+    custom = (topic_text or "").strip()
+    if topic_id is not None and custom:
+        raise HttpError(400, "Send a topic_id or your own topic_text, not both.")
+    if topic_id is None and not custom:
+        raise HttpError(400, "Choose a topic: send a topic_id or your own topic_text.")
+
+    if custom:
+        if len(custom) < CUSTOM_TOPIC_MIN_CHARS:
+            raise HttpError(400, f"Your topic needs at least {CUSTOM_TOPIC_MIN_CHARS} characters.")
+        if len(custom) > CUSTOM_TOPIC_MAX_CHARS:
+            raise HttpError(
+                400, f"Keep your topic to {CUSTOM_TOPIC_MAX_CHARS} characters: a prompt, not a script."
+            )
+        topic, source, text = None, Session.SOURCE_CUSTOM, " ".join(custom.split())
+    else:
+        topic = Topic.objects.filter(id=topic_id).first()
+        if topic is None:
+            raise HttpError(404, f"Topic {topic_id} does not exist.")
+        source, text = Session.SOURCE_RANDOM, topic.text
+
+    min_sec, max_sec = _session_bounds(load_scoring())
     if not math.isfinite(duration_sec) or duration_sec <= 0:
         raise HttpError(400, "Recording duration must be a positive number of seconds.")
-    if duration_sec > MAX_DURATION_SEC:
-        raise HttpError(400, "That recording is too long to analyse.")
+    if duration_sec + DURATION_GRACE_SEC < min_sec:
+        raise HttpError(400, _too_short(min_sec))
+    if duration_sec > max_sec + DURATION_GRACE_SEC:
+        raise HttpError(400, f"Takes are capped at {_clock(max_sec)}. That recording is too long to analyse.")
 
     session = Session.objects.create(
         user=request.user,
         topic=topic,
-        topic_text=topic.text,
+        topic_source=source,
+        topic_text=text,
         audio=audio,
         duration_sec=duration_sec,
     )
 
-    _analyze(session)
+    audio_sec = _analyze(session)
+    # The claimed duration passed; now check the recording itself. A short
+    # file sent with a long duration_sec would otherwise be scored and could
+    # unlock level 1. Unknown length (decode failed) is not held against it.
+    if audio_sec is not None and audio_sec + DURATION_GRACE_SEC < min_sec:
+        session.audio.delete(save=False)
+        session.delete()
+        raise HttpError(400, _too_short(min_sec))
+
     _update_progression(session)
     return 201, {"session_id": session.id}
 
 
-def _analyze(session: Session) -> None:
-    """Fill transcription, metrics, scores and feedback on a saved session."""
+def _too_short(min_sec: float) -> str:
+    return (
+        f"Keep talking for at least {_clock(min_sec)}: shorter takes are not scored, "
+        "because there is too little speech to measure fairly."
+    )
+
+
+def _analyze(session: Session) -> float | None:
+    """Fill transcription, metrics, scores and feedback on a saved session.
+    Returns the decoded audio length in seconds, or None when unknown."""
     cfg = load_scoring()
     fillers = load_fillers()
 
@@ -147,24 +224,24 @@ def _analyze(session: Session) -> None:
     session.overall_score = scores["overall"]
     session.feedback_json = notes
     session.save()
+    return trans.get("audio_sec")
 
 
 def _update_progression(session: Session) -> None:
-    """Capture the baseline on the account's first session and advance its
-    (monotonic) level. Scoped to session.user so one speaker's history never
-    moves another's level."""
+    """Capture the baseline on the account's first random-topic session and
+    advance its (monotonic) level. Scoped to session.user so one speaker's
+    history never moves another's level. An own-topic take never sets the
+    baseline (it contains relevance) but can unlock the delivery levels."""
     cfg = load_scoring()
     state = UserState.for_user(session.user)
 
-    if state.baseline_overall is None:
+    if state.baseline_overall is None and session.topic_source == Session.SOURCE_RANDOM:
         state.baseline_overall = session.overall_score
 
-    sessions = list(
-        Session.objects.filter(user=session.user)
-        .order_by("-created_at")
-        .values(*_LEVEL_FIELDS)
+    random_only, every = _leveling_sessions(session.user)
+    candidate = levels_mod.evaluate(
+        random_only, state.baseline_overall, cfg, delivery_sessions=every
     )
-    candidate = levels_mod.evaluate(sessions, state.baseline_overall, cfg)
     state.current_level = max(state.current_level, candidate)
     state.save()
 
@@ -185,6 +262,7 @@ def get_session(request, session_id: int):
         "id": session.id,
         "created_at": session.created_at,
         "topic_text": session.topic_text,
+        "topic_source": session.topic_source,
         "duration_sec": session.duration_sec,
         "transcript": session.transcript,
         "audio_url": audio_url,
@@ -254,6 +332,9 @@ def delete_session(request, session_id: int):
     session = _sessions_of(request).filter(id=session_id).first()
     if session is None:
         raise HttpError(404, f"Session {session_id} does not exist.")
+    # Django never removes a FileField's file on its own; without this the
+    # recording outlived the take on disk.
+    session.audio.delete(save=False)
     session.delete()
     return {"ok": True}
 
@@ -265,7 +346,12 @@ def get_scoring_config(request):
     fillers = load_fillers()
     return {
         "weights": cfg["weights"],
-        "min_session_sec": cfg.get("min_session_sec", 45),
+        # Read from the `session` block. This used to be cfg.get(..., 45) at
+        # the top level, where no such key exists, so it always said 45.
+        "min_session_sec": _session_bounds(cfg)[0],
+        "max_session_sec": _session_bounds(cfg)[1],
+        "custom_topic_min_chars": CUSTOM_TOPIC_MIN_CHARS,
+        "custom_topic_max_chars": CUSTOM_TOPIC_MAX_CHARS,
         # What the results replay needs to mark a take the same way the scorer
         # measured it, without the frontend keeping its own copy of the lists.
         "pace_target_min": cfg["pace"]["target_min"],
@@ -285,7 +371,7 @@ def progress(request):
     state = UserState.for_user(request.user)
     rows = _sessions_of(request).order_by("created_at").values(
         "created_at", "overall_score", "pace_score", "filler_score",
-        "pause_score", "relevance_score",
+        "pause_score", "relevance_score", "topic_source",
     )
     points = [
         {
@@ -295,6 +381,7 @@ def progress(request):
             "filler": r["filler_score"],
             "pause": r["pause_score"],
             "relevance": r["relevance_score"],
+            "topic_source": r["topic_source"],
         }
         for r in rows
     ]
@@ -309,10 +396,12 @@ def progress(request):
 def level(request):
     cfg = load_scoring()
     state = UserState.for_user(request.user)
-    sessions = list(_sessions_of(request).order_by("-created_at").values(*_LEVEL_FIELDS))
+    random_only, every = _leveling_sessions(request.user)
 
     current = levels_mod.describe(state.current_level)
-    prog = levels_mod.progress_to_next(sessions, state.baseline_overall, state.current_level, cfg)
+    prog = levels_mod.progress_to_next(
+        random_only, state.baseline_overall, state.current_level, cfg, delivery_sessions=every
+    )
     next_level = prog["next_level"]
     unlocked = [levels_mod.describe(lvl) for lvl in range(1, state.current_level + 1)]
 

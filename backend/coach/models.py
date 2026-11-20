@@ -42,8 +42,22 @@ class Session(models.Model):
         blank=True,
         db_index=True,
     )
-    topic = models.ForeignKey(Topic, on_delete=models.PROTECT, related_name="sessions")
-    topic_text = models.TextField()  # denormalised snapshot (topic text may change)
+    # Where the prompt came from. A RANDOM take answers a seeded Topic; a CUSTOM
+    # take answers a prompt the speaker typed, so it has no Topic row. Custom
+    # takes are scored the same way but only count towards the delivery levels
+    # (levels.DELIVERY_LEVELS): the speaker wrote the very text relevance is
+    # measured against, so relevance-based levels could be gamed.
+    SOURCE_RANDOM = "random"
+    SOURCE_CUSTOM = "custom"
+    SOURCE_CHOICES = [(SOURCE_RANDOM, "Random topic"), (SOURCE_CUSTOM, "Own topic")]
+
+    topic = models.ForeignKey(
+        Topic, on_delete=models.PROTECT, related_name="sessions", null=True, blank=True
+    )
+    topic_source = models.CharField(
+        max_length=10, choices=SOURCE_CHOICES, default=SOURCE_RANDOM, db_index=True
+    )
+    topic_text = models.TextField()  # snapshot; the only topic a CUSTOM take has
     audio = models.FileField(upload_to="audio/")
     duration_sec = models.FloatField()
 

@@ -114,7 +114,7 @@ export function RegisterPage() {
           Your first take is <span className="text-gradient">a minute away.</span>
         </>
       }
-      subtitle="No credit card, no setup. Pick a topic, speak for sixty seconds, and see exactly where your delivery stands."
+      subtitle="No credit card, no setup. Pick a topic, speak for a minute or more, and see exactly where your delivery stands."
       footer={
         <>
           Already have an account?{' '}

@@ -21,10 +21,13 @@ def get_model():
 def transcribe(audio_path: str) -> dict:
     """Transcribe an audio file to text plus per-word timestamps.
 
-    Returns {"transcript": str, "words": [{"word","start","end"}], "word_count": int}.
+    Returns {"transcript": str, "words": [{"word","start","end"}], "word_count": int,
+             "audio_sec": float}.
+    `audio_sec` is the decoded length of the file, the server's own measure of
+    how long the take ran (the client's clock is only a claim).
     English-only (scope). Silence yields an empty transcript rather than an error.
     """
-    segments, _info = get_model().transcribe(
+    segments, info = get_model().transcribe(
         audio_path,
         language="en",
         word_timestamps=True,
@@ -37,4 +40,9 @@ def transcribe(audio_path: str) -> dict:
             words.append({"word": w.word, "start": float(w.start), "end": float(w.end)})
 
     transcript = "".join(w["word"] for w in words).strip()
-    return {"transcript": transcript, "words": words, "word_count": len(words)}
+    return {
+        "transcript": transcript,
+        "words": words,
+        "word_count": len(words),
+        "audio_sec": float(info.duration),
+    }

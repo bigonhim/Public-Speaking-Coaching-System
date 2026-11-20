@@ -168,6 +168,14 @@ level rules live there. Filler word lists live in
 Every number a user sees is traceable to these files. Because the config is
 cached, changes take effect on restart.
 
+**Take length** is set in the `session:` block. A take must run at least
+`min_graded_sec` (60 s) to be scored: shorter ones are refused by the server,
+which checks both the browser's reported duration and the decoded audio, and
+the stage discards them instead of uploading. Past the minimum a speaker can
+keep going up to `max_sec` (10 min), where the recorder stops and submits by
+itself. The cap exists because transcription runs on CPU while the request
+waits; raise it if your machine transcribes faster.
+
 > These values are **starting points to be calibrated** against human ratings —
 > not ground truth. The raw MiniLM cosine similarity is always stored, so the
 > relevance mapping can be re-tuned without re-recording.
@@ -184,11 +192,49 @@ cd backend
 The pure academic core (`metrics`, `scoring`, `levels`) is tested with
 hand-computed synthetic fixtures — boundary values and clamping — never against
 live Whisper output. API tests mock transcription/embedding so they run fast and
-deterministically. **102 tests.**
+deterministically. **125 tests.**
 
 `tests/test_auth.py` covers registration, sign-in, throttling and CSRF;
 `tests/test_api.py` additionally proves that every endpoint refuses anonymous
-callers and that one account cannot see, stream or delete another's sessions.
+callers and that one account cannot see, stream or delete another's sessions;
+`tests/test_custom_topic.py` covers own topics: validation, scoring against
+the typed text, and that they reach the delivery levels but never the
+relevance-based ones.
+
+---
+
+## Own topics
+
+The Practice screen has a **Random | My own** switch. *Random* draws one of the
+seeded prompts, as before. *My own* lets the speaker type what they want to
+talk about (5–150 characters) and records against that.
+
+Own-topic takes are analysed and scored exactly like random ones. Relevance is
+measured against the text the speaker typed. They appear in the history and
+the trend chart, tagged **Your topic**.
+
+| Level | Rule reads | Own-topic takes count? |
+|---|---|---|
+| 1 The Novice | duration | yes |
+| 2 The Apprentice | overall score (contains relevance) | no |
+| 3 The Speaker | pace | yes |
+| 4 The Communicator | fillers | yes |
+| 5 The Persuader | relevance | no |
+| 6 The Orator | overall + every component | no |
+| 7 The Master Orator | overall | no |
+
+Relevance is 35% of the score, and a speaker who writes their own prompt could
+simply echo their planned speech (in testing, repeating the topic's words
+scored a higher similarity than a real answer). So own topics only help with
+the levels that measure *how* you speak, and the baseline is taken from the
+first random-topic take.
+
+API: `POST /api/sessions` takes **either** `topic_id` **or** `topic_text`,
+never both and never neither. Each session records `topic_source`
+(`random` | `custom`). `api.py` (`_leveling_sessions`) builds two pools, random
+takes and all takes, and the pure `levels.py` judges `DELIVERY_LEVELS = {1, 3, 4}`
+on the wider pool and every other level on random takes only. `levels.py` never
+learns where a topic came from.
 
 ---
 

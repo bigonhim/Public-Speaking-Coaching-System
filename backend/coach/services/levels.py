@@ -7,6 +7,11 @@ level whose unlock condition holds. The caller applies monotonicity
 Session dict fields consumed:
   duration_sec, overall_score, wpm, filler_per_min, relevance_score,
   pace_score, filler_score, pause_score
+
+Two pools of sessions. `sessions` holds the takes every level may use (in the
+app: random-topic takes). The optional `delivery_sessions` holds a wider pool
+(in the app: every take, own topics included) that only DELIVERY_LEVELS read.
+This module never learns where a topic came from; the caller picks the pools.
 """
 
 # level -> (name, award)
@@ -21,6 +26,20 @@ _LEVELS = {
     7: ("The Master Orator", "Master Orator"),
 }
 MAX_LEVEL = 7
+
+# Levels whose rule reads only HOW you spoke: duration (1), pace (3) and
+# fillers (4). None of them touch relevance or the overall score (which
+# contains relevance), so they can't be gamed by choosing your own topic, and
+# own-topic takes may count towards them. Levels 2, 5, 6 and 7 all depend on
+# relevance, directly or through the overall score.
+DELIVERY_LEVELS = frozenset({1, 3, 4})
+
+
+def _pool_for(level: int, sessions: list[dict], delivery_sessions: list[dict] | None) -> list[dict]:
+    """The sessions a level's rule is judged on."""
+    if level in DELIVERY_LEVELS and delivery_sessions is not None:
+        return delivery_sessions
+    return sessions
 
 
 # --- small null-safe helpers ------------------------------------------------
@@ -102,13 +121,23 @@ def _condition(level: int, sessions: list[dict], baseline: float | None, cfg: di
     return False
 
 
-def evaluate(sessions: list[dict], baseline: float | None, cfg: dict) -> int:
+def evaluate(
+    sessions: list[dict],
+    baseline: float | None,
+    cfg: dict,
+    delivery_sessions: list[dict] | None = None,
+) -> int:
     """Return the HIGHEST level (1..7) whose condition holds, else 0.
 
     Lower conditions need not hold simultaneously. Monotonicity is the caller's
-    responsibility.
+    responsibility. DELIVERY_LEVELS are judged on `delivery_sessions` when it
+    is given; every other level on `sessions`.
     """
-    met = [lvl for lvl in range(1, MAX_LEVEL + 1) if _condition(lvl, sessions, baseline, cfg)]
+    met = [
+        lvl
+        for lvl in range(1, MAX_LEVEL + 1)
+        if _condition(lvl, _pool_for(lvl, sessions, delivery_sessions), baseline, cfg)
+    ]
     return max(met) if met else 0
 
 
@@ -122,11 +151,18 @@ def _fraction(count: int, needed: int) -> float:
 
 
 def progress_to_next(
-    sessions: list[dict], baseline: float | None, current_level: int, cfg: dict
+    sessions: list[dict],
+    baseline: float | None,
+    current_level: int,
+    cfg: dict,
+    delivery_sessions: list[dict] | None = None,
 ) -> dict:
-    """Progress toward `current_level + 1`: a 0..1 fraction plus a human string."""
+    """Progress toward `current_level + 1`: a 0..1 fraction plus a human string.
+
+    Judged on the same pool `evaluate` would use for that level."""
     lv = cfg["levels"]
     nxt = current_level + 1
+    sessions = _pool_for(nxt, sessions, delivery_sessions)
 
     if current_level >= MAX_LEVEL:
         return {"next_level": None, "progress_fraction": 1.0,

@@ -28,9 +28,16 @@ def test_no_sessions_is_level_zero():
     assert levels.evaluate([], None, CFG) == 0
 
 
-def test_level1_requires_45s_session():
-    assert levels.evaluate([sess(duration_sec=50.0)], None, CFG) == 1
-    assert levels.evaluate([sess(duration_sec=30.0)], None, CFG) == 0
+def test_level1_requires_a_take_of_the_minimum_length():
+    need = CFG["levels"]["min_session_sec"]
+    assert levels.evaluate([sess(duration_sec=need)], None, CFG) == 1
+    assert levels.evaluate([sess(duration_sec=need - 1)], None, CFG) == 0
+
+
+def test_level1_bar_is_not_below_the_graded_minimum():
+    """Every scored take must be able to reach level 1; a level-1 bar below the
+    graded minimum would be meaningless, one above it is a deliberate choice."""
+    assert CFG["levels"]["min_session_sec"] >= CFG["session"]["min_graded_sec"]
 
 
 def test_level2_needs_three_sessions_and_improvement():
@@ -102,3 +109,45 @@ def test_describe_names_and_awards():
     assert levels.describe(1) == {"level": 1, "name": "The Novice", "award": "First Voice"}
     assert levels.describe(7)["name"] == "The Master Orator"
     assert levels.describe(0)["level"] == 0
+
+
+# --- two pools: delivery levels may use a wider set of sessions ---------------
+def test_delivery_levels_are_exactly_duration_pace_and_fillers():
+    # These three rules read no relevance and no overall score. If a rule is
+    # ever added here, it must not depend on either.
+    assert levels.DELIVERY_LEVELS == {1, 3, 4}
+
+
+def test_delivery_pool_unlocks_delivery_levels():
+    strong = sess(duration_sec=60.0, wpm=135.0, filler_per_min=1.0)
+    # Nothing in the main pool, three strong takes in the delivery pool.
+    assert levels.evaluate([], None, CFG, delivery_sessions=[strong] * 3) == 4
+
+
+def test_delivery_pool_never_reaches_relevance_levels():
+    # Perfect on every count, including relevance and overall: in the main
+    # pool this is Level 7. In the delivery pool alone it must stop at 4.
+    perfect = sess(
+        duration_sec=60.0, wpm=135.0, filler_per_min=0.5, overall_score=95.0,
+        relevance_score=95.0, pace_score=100.0, filler_score=100.0, pause_score=100.0,
+    )
+    assert levels.evaluate([perfect] * 5, 40.0, CFG) == 7
+    assert levels.evaluate([], 40.0, CFG, delivery_sessions=[perfect] * 5) == 4
+
+
+def test_without_a_delivery_pool_behaviour_is_unchanged():
+    good = sess(wpm=135.0)
+    pool = [good, good, good, sess(), sess()]
+    assert levels.evaluate(pool, None, CFG) == levels.evaluate(pool, None, CFG, delivery_sessions=None)
+
+
+def test_progress_uses_the_delivery_pool_for_delivery_levels():
+    pace_ok = sess(wpm=135.0)
+    prog = levels.progress_to_next([], None, 2, CFG, delivery_sessions=[pace_ok, pace_ok])
+    assert prog["next_level"] == 3
+    assert prog["progress_fraction"] == pytest.approx(2 / 3)
+    # ...but not for relevance levels.
+    high_rel = sess(relevance_score=95.0)
+    prog = levels.progress_to_next([], None, 4, CFG, delivery_sessions=[high_rel] * 3)
+    assert prog["next_level"] == 5
+    assert prog["progress_fraction"] == 0.0

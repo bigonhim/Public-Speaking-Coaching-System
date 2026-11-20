@@ -236,7 +236,14 @@ export function ProgressPage() {
                   <p className="truncate font-medium text-ink-700 group-hover:text-ink-900">
                     {s.topic_text}
                   </p>
-                  <p className="text-xs text-ink-400">{formatDate(s.created_at)}</p>
+                  <p className="text-xs text-ink-400">
+                    {formatDate(s.created_at)}
+                    {s.topic_source === 'custom' && (
+                      <span className="ml-2 rounded-md bg-ink-900/[0.06] px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.1em] text-ink-600">
+                        Your topic
+                      </span>
+                    )}
+                  </p>
                 </div>
                 <span
                   className="flex h-9 min-w-9 shrink-0 items-center justify-center rounded-xl px-2.5 font-display text-sm font-bold tabular-nums text-white shadow-sm"

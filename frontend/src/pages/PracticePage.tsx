@@ -1,13 +1,18 @@
-// The practice flow: fetch a topic -> optional breathing ritual -> record with
+// The practice flow: choose a topic -> optional breathing ritual -> record with
 // a live, reacting audience -> submit for analysis -> route to results.
+//
+// The topic is either drawn at random or typed by the speaker ("My own").
+// Own-topic takes are scored the same way but only count towards the delivery
+// levels (duration, pace, fillers): the speaker wrote the text that relevance
+// is measured against.
 //
 // The idle screen is the console at rest: the topic on its display, the room
 // on its monitor, and the record button waiting in the transport row.
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Shuffle } from 'lucide-react'
-import type { ScoringConfig, Topic } from '../api/types'
+import { PenLine, Shuffle } from 'lucide-react'
+import type { ScoringConfig, Topic, TopicChoice, TopicSource } from '../api/types'
 import { ApiError, createSession, getLevel, getRandomTopic, getScoringConfig } from '../api/client'
 import { useRecorder } from '../hooks/useRecorder'
 import { useLiveAudio } from '../hooks/useLiveAudio'
@@ -21,6 +26,26 @@ import { ROOM_LABEL, ROOM_SHORT, ROOM_SIZES, defaultRoomSize, forgivenessForSize
 
 type Phase = 'idle' | 'ritual' | 'recording' | 'submitting'
 const SKIP_RITUAL_KEY = 'coach.skipRitual'
+const TOPIC_MODE_KEY = 'coach.topicMode'
+const OWN_TOPIC_KEY = 'coach.ownTopic'
+
+// Per-browser conveniences only: storage may be blocked, so every access is
+// guarded and the page works the same without it.
+function readStored(key: string): string | null {
+  try {
+    return localStorage.getItem(key)
+  } catch {
+    return null
+  }
+}
+
+function writeStored(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value)
+  } catch {
+    // Storage blocked: nothing is remembered, nothing breaks.
+  }
+}
 
 function skipsRitual(): boolean {
   try {
@@ -40,8 +65,25 @@ export function PracticePage() {
   const [error, setError] = useState<string | null>(null)
   const [loadingTopic, setLoadingTopic] = useState(true)
   const [config, setConfig] = useState<ScoringConfig | null>(null)
+  const [topicMode, setTopicMode] = useState<TopicSource>(() =>
+    readStored(TOPIC_MODE_KEY) === 'custom' ? 'custom' : 'random',
+  )
+  const [ownTopic, setOwnTopic] = useState<string>(() => readStored(OWN_TOPIC_KEY) ?? '')
 
-  const minSec = config?.min_session_sec ?? 45
+  // A take needs at least minSec to be scored; past that the speaker can keep
+  // going until maxSec, where the recorder stops and submits on its own.
+  const minSec = config?.min_session_sec ?? 60
+  const maxSec = config?.max_session_sec ?? 600
+  // The server is the authority on these; the fallbacks only cover the moment
+  // before /scoring has answered.
+  const ownMin = config?.custom_topic_min_chars ?? 5
+  const ownMax = config?.custom_topic_max_chars ?? 150
+  const ownTrimmed = ownTopic.trim().replace(/\s+/g, ' ')
+  const ownValid = ownTrimmed.length >= ownMin && ownTrimmed.length <= ownMax
+
+  const isOwn = topicMode === 'custom'
+  const activeTopicText = isOwn ? ownTrimmed : (topic?.text ?? '')
+  const canRecord = isOwn ? ownValid : !loadingTopic && !!topic
   const paceTarget: [number, number] = [config?.pace_target_min ?? 120, config?.pace_target_max ?? 150]
 
   const forgiveness = forgivenessForSize(roomSize)
@@ -76,10 +118,22 @@ export function PracticePage() {
     // a denied permission showing the full-screen stage with a running clock
     // and nothing listening — the error message was behind the overlay.
     const started = await recorder.start()
+    if (started) setError(null)
     setPhase(started ? 'recording' : 'idle')
   }, [recorder])
 
+  const chooseMode = (mode: TopicSource) => {
+    setTopicMode(mode)
+    writeStored(TOPIC_MODE_KEY, mode)
+  }
+
+  const editOwnTopic = (text: string) => {
+    setOwnTopic(text)
+    writeStored(OWN_TOPIC_KEY, text)
+  }
+
   const startPractice = () => {
+    if (!canRecord) return
     if (skipsRitual()) {
       void beginRecording()
     } else {
@@ -87,11 +141,25 @@ export function PracticePage() {
     }
   }
 
+  // Set while a take is being stopped, so the auto-stop at maxSec and a press
+  // of STOP landing together cannot submit the same take twice.
+  const stoppingRef = useRef(false)
+
   const stopAndSubmit = async () => {
-    if (!topic) return
+    if (stoppingRef.current) return
+    // What was on screen when REC was pressed.
+    let choice: TopicChoice | null = null
+    if (isOwn && ownValid) choice = { topicText: ownTrimmed }
+    else if (!isOwn && topic) choice = { topicId: topic.id }
+    if (!choice) return
     const durationSec = recorder.elapsedSec
+    // Too short to score: the server would refuse it, so do not upload it.
+    // StageView routes an early stop to discardTake; this is the backstop.
+    if (durationSec < minSec) return
+    stoppingRef.current = true
     const mimeType = recorder.mimeType
     const blob = await recorder.stop()
+    stoppingRef.current = false
     if (!blob) {
       setError('Recording was empty. Please try again.')
       setPhase('idle')
@@ -99,13 +167,33 @@ export function PracticePage() {
     }
     setPhase('submitting')
     try {
-      const id = await createSession(blob, topic.id, durationSec, mimeType)
+      const id = await createSession(blob, choice, durationSec, mimeType)
       navigate(`/results/${id}`)
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Analysis failed. Please try again.')
       setPhase('idle')
     }
   }
+
+  /** Stop before the minimum: nothing is uploaded or scored. */
+  const discardTake = async () => {
+    if (stoppingRef.current) return
+    stoppingRef.current = true
+    await recorder.stop()
+    stoppingRef.current = false
+    recorder.reset()
+    setError(`That take was under ${formatClock(minSec)}, so it was not scored. Takes need at least ${formatClock(minSec)}.`)
+    setPhase('idle')
+  }
+
+  // The cap: stop and score on its own rather than let the speaker talk past
+  // what the server accepts.
+  const atCap = phase === 'recording' && recorder.elapsedSec >= maxSec
+  useEffect(() => {
+    if (atCap) void stopAndSubmit()
+    // stopAndSubmit is recreated every render; firing on the cap edge is all
+    // that matters here, and stoppingRef guards against a repeat.
+  }, [atCap])
 
   // --- Ritual overlay --------------------------------------------------------
   if (phase === 'ritual') {
@@ -138,17 +226,17 @@ export function PracticePage() {
               <li>▸ Checking how closely it stayed on topic</li>
             </ul>
           </div>
-          <p className="mt-4 text-sm text-ink-500">This takes a few seconds.</p>
+          <p className="mt-4 text-sm text-ink-500">This takes a few seconds; longer takes take a little longer.</p>
         </Module>
       </Chassis>
     )
   }
 
   // --- Recording: the console in record mode ----------------------------------
-  if (phase === 'recording' && topic) {
+  if (phase === 'recording' && activeTopicText) {
     return (
       <StageView
-        topic={topic.text}
+        topic={activeTopicText}
         roomSize={roomSize}
         engagement={live.engagement}
         elapsedSec={recorder.elapsedSec}
@@ -158,7 +246,9 @@ export function PracticePage() {
         interim={transcript.interim}
         transcriptSupported={transcript.supported}
         onStop={stopAndSubmit}
+        onDiscard={discardTake}
         minSec={minSec}
+        maxSec={maxSec}
         paceTarget={paceTarget}
       />
     )
@@ -170,10 +260,40 @@ export function PracticePage() {
   return (
     <Chassis className="animate-fade-up">
       <div className="flex flex-wrap gap-4 sm:gap-[22px]">
-        <Module label="01 · Topic" aside={topic?.category} className="flex flex-[7_1_520px] flex-col">
+        <Module
+          label="01 · Topic"
+          aside={isOwn ? 'Your topic' : topic?.category}
+          className="flex flex-[7_1_520px] flex-col"
+        >
           <div className="lcd min-h-[214px] flex-1 px-6 py-6 sm:px-7">
-            <p className="lcd-glow font-mono text-xs uppercase tracking-[0.14em]">▸ Speak for about a minute</p>
-            {loadingTopic ? (
+            <p className="lcd-glow font-mono text-xs uppercase tracking-[0.14em]">
+              {isOwn ? '▸ Type what you want to talk about' : `▸ Speak for at least ${formatClock(minSec)}, longer if you can`}
+            </p>
+            {isOwn ? (
+              <>
+                <label htmlFor="own-topic" className="sr-only">
+                  Your topic
+                </label>
+                <textarea
+                  id="own-topic"
+                  value={ownTopic}
+                  onChange={(e) => editOwnTopic(e.target.value)}
+                  onKeyDown={(e) => {
+                    // A topic is one line; Enter starts the take instead.
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      startPractice()
+                    }
+                  }}
+                  maxLength={ownMax}
+                  rows={3}
+                  autoFocus
+                  placeholder="e.g. Why everyone should learn to cook"
+                  aria-describedby="own-topic-hint"
+                  className="mt-[18px] block w-full max-w-[640px] resize-none bg-transparent text-[1.5rem] font-medium leading-[1.2] tracking-[-0.02em] text-lcd-text caret-[#ff8a4c] outline-none placeholder:text-lcd-dim sm:text-[2rem]"
+                />
+              </>
+            ) : loadingTopic ? (
               <p className="mt-5 font-mono text-sm uppercase tracking-[0.12em] text-lcd-dim motion-safe:animate-blink">
                 Loading a topic…
               </p>
@@ -184,13 +304,46 @@ export function PracticePage() {
             )}
           </div>
           <div className="mt-[18px] flex flex-wrap items-center justify-between gap-3">
-            <button onClick={loadTopic} className="key" disabled={loadingTopic}>
-              <Shuffle size={15} className={loadingTopic ? 'animate-spin' : ''} aria-hidden />
-              New topic
-            </button>
-            <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-500">
-              Takes under {formatClock(minSec)} aren’t scored
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <div role="group" aria-label="Topic source" className="flex gap-1.5">
+                <button
+                  onClick={() => chooseMode('random')}
+                  aria-pressed={!isOwn}
+                  className={`key ${!isOwn ? 'key-on' : ''}`}
+                >
+                  <Shuffle size={15} aria-hidden />
+                  Random
+                </button>
+                <button
+                  onClick={() => chooseMode('custom')}
+                  aria-pressed={isOwn}
+                  className={`key ${isOwn ? 'key-on' : ''}`}
+                >
+                  <PenLine size={15} aria-hidden />
+                  My own
+                </button>
+              </div>
+              {!isOwn && (
+                <button onClick={loadTopic} className="key" disabled={loadingTopic}>
+                  <Shuffle size={15} className={loadingTopic ? 'animate-spin' : ''} aria-hidden />
+                  New topic
+                </button>
+              )}
+            </div>
+            {isOwn ? (
+              <span
+                id="own-topic-hint"
+                aria-live="polite"
+                className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-500"
+              >
+                {ownTrimmed.length < ownMin ? `At least ${ownMin} characters` : `${ownTrimmed.length}/${ownMax}`}
+                {' · Counts for delivery levels'}
+              </span>
+            ) : (
+              <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-500">
+                Scored from {formatClock(minSec)} · up to {formatClock(maxSec)}
+              </span>
+            )}
           </div>
         </Module>
 
@@ -250,7 +403,7 @@ export function PracticePage() {
             </span>
           </div>
           <div className="flex flex-col items-center gap-3.5">
-            <RecButton onClick={startPractice} disabled={loadingTopic || !topic} label="Begin a take" />
+            <RecButton onClick={startPractice} disabled={!canRecord} label="Begin a take" />
             <span className="max-w-[240px] text-center font-mono text-[10.5px] uppercase tracking-[0.14em] text-ink-500">
               {skipsRitual() ? 'Press to begin recording' : 'Press to begin · breathing warm-up first'}
             </span>

@@ -127,14 +127,14 @@ export function LandingPage() {
         <section className="bg-gradient-to-b from-white to-brand-50">
           <div className="wrap grid gap-14 pb-20 pt-14 sm:pt-20 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:gap-14 lg:pb-28 lg:pt-24">
             <div className="animate-fade-up">
-              <p className="eyebrow">A speaking coach for one-minute takes</p>
+              <p className="eyebrow">A speaking coach for spoken practice</p>
               <h1 className="h-hero mt-5">
                 Say it out loud, to a room that{' '}
                 <em className="whitespace-nowrap text-brand-600">listens back.</em>
               </h1>
               <p className="lede mt-6 max-w-xl">
                 Cadence gives you a topic and a virtual audience that reacts to your voice as you
-                speak. A minute later you get a score you can explain: pace, fillers, pauses and
+                speak. When you stop, you get a score you can explain: pace, fillers, pauses and
                 relevance.
               </p>
               <div className="mt-9 flex flex-wrap items-center gap-3">
@@ -144,7 +144,7 @@ export function LandingPage() {
                 </Link>
               </div>
               <p className="mt-5 text-sm text-ink-500">
-                A take is about a minute. All you need is a microphone.
+                Talk for a minute or more. All you need is a microphone.
               </p>
             </div>
             <RoomDemo />
@@ -219,7 +219,7 @@ export function LandingPage() {
                 <p className="mt-6 font-display text-lg text-brand-600">02</p>
                 <h3 className="mt-1 font-display text-2xl font-medium text-ink-950">Speak</h3>
                 <p className="mt-3 leading-relaxed text-ink-600">
-                  You get a topic and about a minute. The audience reacts to how you sound as you
+                  You get a topic and talk for at least a minute, longer if you can. The audience reacts to how you sound as you
                   go, never to your words.
                 </p>
               </li>
@@ -369,7 +369,7 @@ export function LandingPage() {
         <section className="bg-brand-700 text-white">
           <div className="wrap band text-center">
             <h2 className="h-section mx-auto max-w-2xl text-white">
-              Your first take is a minute long.
+              Your first take is a minute away.
             </h2>
             <p className="lede mx-auto mt-5 max-w-xl text-white/75">
               Create an account, take a topic, and hear what the room hears.
@@ -392,7 +392,7 @@ export function LandingPage() {
           <div className="flex items-center gap-4">
             <Wordmark size={28} />
             <span className="hidden text-sm text-ink-500 sm:inline">
-              Speaking practice, one minute at a time.
+              Speaking practice, one take at a time.
             </span>
           </div>
           <nav className="flex items-center gap-6 text-sm font-medium text-ink-600">

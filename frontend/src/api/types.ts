@@ -19,6 +19,13 @@ export interface Topic {
   category: string
 }
 
+/** Where a take's prompt came from: a drawn topic, or one the speaker typed.
+ *  Own-topic takes are scored but only count towards the delivery levels. */
+export type TopicSource = 'random' | 'custom'
+
+/** What a take answers when it is submitted: exactly one of the two. */
+export type TopicChoice = { topicId: number } | { topicText: string }
+
 export interface Metrics {
   wpm: number | null
   filler_count: number | null
@@ -54,6 +61,7 @@ export interface SessionDetail {
   id: number
   created_at: string
   topic_text: string
+  topic_source: TopicSource
   duration_sec: number
   transcript: string
   audio_url: string | null
@@ -68,6 +76,7 @@ export interface SessionListItem {
   id: number
   created_at: string
   topic_text: string
+  topic_source: TopicSource
   overall_score: number | null
 }
 
@@ -78,6 +87,7 @@ export interface ProgressPoint {
   filler: number | null
   pause: number | null
   relevance: number | null
+  topic_source: TopicSource
 }
 
 export interface Progress {
@@ -106,7 +116,12 @@ export interface LevelState {
 /** GET /scoring — the scorer's own settings (backend/coach/config/*.yaml). */
 export interface ScoringConfig {
   weights: Weights
+  /** Takes shorter than this are refused by the server, not scored. */
   min_session_sec: number
+  /** The recorder stops itself here; longer takes are refused. */
+  max_session_sec: number
+  custom_topic_min_chars: number
+  custom_topic_max_chars: number
   pace_target_min: number
   pace_target_max: number
   pause_min_sec: number
